@@ -5,6 +5,7 @@ import { db } from '../firebase';
 import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { useCart } from '../context/CartContext';
 import { MOCK_PRODUCTS } from '../mockData';
+import ShareModal from '../components/ShareModal';
 
 // Стартовые демо-рилсы с вертикальными видео (Mixkit)
 const DEFAULT_REELS = [
@@ -65,6 +66,9 @@ export default function Reels() {
   const [showComments, setShowComments] = useState(false);
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState('');
+
+  // Состояние модалки репоста
+  const [isShareOpen, setIsShareOpen] = useState(false);
 
   const videoRef = useRef(null);
   const commentsEndRef = useRef(null);
@@ -338,7 +342,7 @@ export default function Reels() {
           )}
         </div>
 
-        {/* Боковые кнопки управления (Лайк, Комментарии, Звук, Ссылка на товар) */}
+        {/* Боковые кнопки управления (Лайк, Комментарии, Репост, Звук, Ссылка на товар) */}
         <div style={{
           position: 'absolute',
           right: '16px',
@@ -397,6 +401,31 @@ export default function Reels() {
             </button>
             <span style={{ color: 'white', fontSize: '11px', fontWeight: 600, marginTop: '5px', textShadow: '0 2px 4px rgba(0,0,0,0.8)' }}>
               {comments.length}
+            </span>
+          </div>
+
+          {/* Репост / Поделиться */}
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            <button
+              onClick={() => setIsShareOpen(true)}
+              style={{
+                width: '46px',
+                height: '46px',
+                borderRadius: '50%',
+                backgroundColor: 'rgba(0,0,0,0.6)',
+                backdropFilter: 'blur(4px)',
+                border: '1px solid rgba(255,255,255,0.15)',
+                color: 'white',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+              title="Поделиться"
+            >
+              <Send size={18} style={{ transform: 'rotate(-45deg)', margin: '0 0 2px 2px' }} />
+            </button>
+            <span style={{ color: 'white', fontSize: '11px', fontWeight: 600, marginTop: '5px', textShadow: '0 2px 4px rgba(0,0,0,0.8)' }}>
+              Поделиться
             </span>
           </div>
 
@@ -560,7 +589,6 @@ export default function Reels() {
             flexDirection: 'column',
             animation: 'slideUp 0.3s cubic-bezier(0.1, 1, 0.1, 1) forwards'
           }}>
-            {/* Хедер панели комментариев */}
             <div style={{
               padding: '14px 20px',
               borderBottom: '1px solid var(--border-color)',
@@ -577,7 +605,6 @@ export default function Reels() {
               </button>
             </div>
 
-            {/* Список комментариев */}
             <div style={{
               flexGrow: 1,
               padding: '16px 20px',
@@ -620,7 +647,6 @@ export default function Reels() {
               <div ref={commentsEndRef} />
             </div>
 
-            {/* Поле добавления комментария */}
             <form 
               onSubmit={handleSendComment}
               style={{
@@ -667,7 +693,14 @@ export default function Reels() {
         )}
       </div>
 
-      {/* Анимационные стили для выдвижения комментариев */}
+      {/* Модалка репоста */}
+      <ShareModal 
+        isOpen={isShareOpen}
+        onClose={() => setIsShareOpen(false)}
+        item={activeReel}
+        type="reel"
+      />
+
       <style>{`
         @keyframes marquee {
           0% { transform: translate3d(0, 0, 0); }

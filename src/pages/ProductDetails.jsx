@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, ShoppingCart, ShieldCheck, Heart, Star, User, MessageSquare } from 'lucide-react';
+import { ArrowLeft, ShoppingCart, ShieldCheck, Heart, Star, User, MessageSquare, Send } from 'lucide-react';
 import { MOCK_PRODUCTS } from '../mockData';
 import { useCart } from '../context/CartContext';
+import ShareModal from '../components/ShareModal';
 
 // Стартовые отзывы
 const SEED_REVIEWS = [
@@ -23,6 +24,9 @@ export default function ProductDetails() {
   const [rating, setRating] = useState(5);
   const [reviewText, setReviewText] = useState('');
   const [hoverRating, setHoverRating] = useState(0);
+
+  // Состояние модалки репоста
+  const [isShareOpen, setIsShareOpen] = useState(false);
 
   // Находим товар по ID
   const baseProduct = MOCK_PRODUCTS.find(p => p.id === id);
@@ -87,7 +91,6 @@ export default function ProductDetails() {
     localStorage.setItem(`demo_reviews_${id}`, JSON.stringify(updatedReviews));
     recalculateProductRating(updatedReviews);
 
-    // Сброс полей формы
     setReviewerName('');
     setReviewText('');
     setRating(5);
@@ -225,7 +228,8 @@ export default function ProductDetails() {
               borderRadius: 'var(--border-radius-sm)',
               overflow: 'hidden',
               height: '48px',
-              background: 'var(--bg-secondary)'
+              background: 'var(--bg-secondary)',
+              flexShrink: 0
             }}>
               <button 
                 onClick={() => setQuantity(prev => Math.max(1, prev - 1))}
@@ -254,6 +258,25 @@ export default function ProductDetails() {
               }}
             >
               <ShoppingCart size={18} /> Добавить в корзину
+            </button>
+
+            {/* Кнопка "Репост / Поделиться" */}
+            <button 
+              onClick={() => setIsShareOpen(true)}
+              className="btn btn-secondary"
+              style={{
+                width: '48px',
+                height: '48px',
+                borderRadius: 'var(--border-radius-sm)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: 0,
+                flexShrink: 0
+              }}
+              title="Поделиться товаром"
+            >
+              <Send size={18} style={{ transform: 'rotate(-45deg)', margin: '0 0 2px 2px' }} />
             </button>
           </div>
 
@@ -357,7 +380,6 @@ export default function ProductDetails() {
                   display: 'flex',
                   gap: '16px'
                 }}>
-                  {/* Заглушка аватара пользователя */}
                   <div style={{
                     width: '40px',
                     height: '40px',
@@ -372,7 +394,6 @@ export default function ProductDetails() {
                     <User size={18} />
                   </div>
 
-                  {/* Текст отзыва */}
                   <div style={{ flexGrow: 1 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
                       <h4 style={{ fontSize: '14px', fontWeight: 700 }}>{rev.author}</h4>
@@ -381,7 +402,6 @@ export default function ProductDetails() {
                       </span>
                     </div>
 
-                    {/* Звезды отзыва */}
                     <div style={{ display: 'flex', gap: '2px', marginBottom: '8px', color: '#ffcc00' }}>
                       {[1, 2, 3, 4, 5].map((s) => (
                         <Star key={s} size={12} fill={s <= rev.rating ? '#ffcc00' : 'none'} strokeWidth={s <= rev.rating ? 0 : 2} />
@@ -402,6 +422,14 @@ export default function ProductDetails() {
           </div>
         </div>
       </section>
+
+      {/* Модалка репоста */}
+      <ShareModal 
+        isOpen={isShareOpen}
+        onClose={() => setIsShareOpen(false)}
+        item={product}
+        type="product"
+      />
     </div>
   );
 }
