@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Package, ClipboardList, Plus, Trash2, Tag, ShieldCheck, Image } from 'lucide-react';
+import { Package, ClipboardList, Plus, Trash2, Tag, ShieldCheck, Image, Film } from 'lucide-react';
 import { MOCK_PRODUCTS } from '../mockData';
 
 export default function Admin() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [activeTab, setActiveTab] = useState('products'); // products, orders, stories
+  const [activeTab, setActiveTab] = useState('products'); // products, orders, stories, reels
   const [products, setProducts] = useState(MOCK_PRODUCTS);
   const [orders, setOrders] = useState([]);
   const [stories, setStories] = useState([]);
+  const [reels, setReels] = useState([]);
   
   // Поля формы нового товара
   const [name, setName] = useState('');
@@ -24,10 +25,16 @@ export default function Admin() {
   const [storyProduct, setStoryProduct] = useState('');
   const [isSubmittingStory, setIsSubmittingStory] = useState(false);
 
-  // Синхронизация таба с URL-параметром (например, ?tab=stories)
+  // Поля формы нового рилса
+  const [reelVideo, setReelVideo] = useState('');
+  const [reelCaption, setReelCaption] = useState('');
+  const [reelProduct, setReelProduct] = useState('');
+  const [isSubmittingReel, setIsSubmittingReel] = useState(false);
+
+  // Синхронизация таба с URL-параметром (например, ?tab=reels)
   useEffect(() => {
     const tabParam = searchParams.get('tab');
-    if (tabParam && ['products', 'orders', 'stories'].includes(tabParam)) {
+    if (tabParam && ['products', 'orders', 'stories', 'reels'].includes(tabParam)) {
       setActiveTab(tabParam);
     } else {
       setActiveTab('products');
@@ -54,6 +61,14 @@ export default function Admin() {
     const savedStories = localStorage.getItem('demo_stories') || '[]';
     try {
       setStories(JSON.parse(savedStories));
+    } catch (e) {
+      console.error(e);
+    }
+
+    // Рилсы
+    const savedReels = localStorage.getItem('demo_reels') || '[]';
+    try {
+      setReels(JSON.parse(savedReels));
     } catch (e) {
       console.error(e);
     }
@@ -146,6 +161,49 @@ export default function Admin() {
     }
   };
 
+  const handleAddReel = async (e) => {
+    e.preventDefault();
+    setIsSubmittingReel(true);
+
+    const newReel = {
+      id: 'reel-' + Date.now(),
+      videoUrl: reelVideo || 'https://assets.mixkit.co/videos/preview/mixkit-girl-in-neon-sign-holding-camera-34280-large.mp4',
+      caption: reelCaption,
+      productId: reelProduct,
+      likes: Math.floor(Math.random() * 500) + 50,
+      liked: false
+    };
+
+    try {
+      await fetch('/api/admin-add-reel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newReel)
+      });
+      await new Promise(resolve => setTimeout(resolve, 600));
+    } catch (err) {
+      await new Promise(resolve => setTimeout(resolve, 600));
+    }
+
+    const updatedReels = [newReel, ...reels];
+    setReels(updatedReels);
+    localStorage.setItem('demo_reels', JSON.stringify(updatedReels));
+
+    setReelVideo('');
+    setReelCaption('');
+    setReelProduct('');
+    setIsSubmittingReel(false);
+    alert('Рилс успешно опубликован!');
+  };
+
+  const handleDeleteReel = (reelId) => {
+    if (window.confirm('Вы действительно хотите удалить этот рилс?')) {
+      const updatedReels = reels.filter(r => r.id !== reelId);
+      setReels(updatedReels);
+      localStorage.setItem('demo_reels', JSON.stringify(updatedReels));
+    }
+  };
+
   return (
     <div className="container animate-fade-in" style={{ padding: '120px 24px 80px' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '40px' }}>
@@ -201,6 +259,24 @@ export default function Admin() {
           }}
         >
           <Image size={16} /> Истории ({stories.length})
+        </button>
+
+        <button
+          onClick={() => handleTabChange('reels')}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            padding: '10px 20px',
+            borderRadius: 'var(--border-radius-sm)',
+            fontWeight: 600,
+            fontSize: '14px',
+            backgroundColor: activeTab === 'reels' ? 'var(--accent-gradient)' : 'transparent',
+            color: activeTab === 'reels' ? 'white' : 'var(--text-secondary)',
+            transition: 'all 0.2s'
+          }}
+        >
+          <Film size={16} /> Рилсы ({reels.length})
         </button>
 
         <button
@@ -356,7 +432,7 @@ export default function Admin() {
           gap: '40px',
           alignItems: 'start'
         }}>
-          {/* Форма создания истории */}
+          {/* ... Форма создания истории ... */}
           <div className="glass" style={{ borderRadius: 'var(--border-radius-md)', padding: '24px' }}>
             <h2 style={{ fontSize: '20px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
               <Plus size={18} /> Опубликовать историю
@@ -443,6 +519,112 @@ export default function Admin() {
                       onMouseEnter={(e) => e.currentTarget.style.color = 'var(--accent-pink)'}
                       onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-tertiary)'}
                       title="Удалить историю"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Контент таба: Рилсы */}
+      {activeTab === 'reels' && (
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: '1.2fr 1.8fr',
+          gap: '40px',
+          alignItems: 'start'
+        }}>
+          {/* Форма создания рилса */}
+          <div className="glass" style={{ borderRadius: 'var(--border-radius-md)', padding: '24px' }}>
+            <h2 style={{ fontSize: '20px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Plus size={18} /> Опубликовать рилс
+            </h2>
+            
+            <form onSubmit={handleAddReel} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)' }}>Описание рилса (хэштеги, текст)</label>
+                <input 
+                  type="text" 
+                  placeholder="Например: Обзор новой оверсайз худи! #fashion #style" 
+                  required 
+                  value={reelCaption}
+                  onChange={(e) => setReelCaption(e.target.value)}
+                />
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)' }}>Ссылка на видеофайл (вертикальный MP4)</label>
+                <input 
+                  type="url" 
+                  placeholder="https://assets.mixkit.co/videos/preview/..." 
+                  required
+                  value={reelVideo}
+                  onChange={(e) => setReelVideo(e.target.value)}
+                />
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)' }}>Рекламируемый товар</label>
+                <select 
+                  value={reelProduct} 
+                  onChange={(e) => setReelProduct(e.target.value)}
+                  style={{ height: '42px' }}
+                  required
+                >
+                  <option value="">Выберите товар для покупки...</option>
+                  {products.map(p => (
+                    <option key={p.id} value={p.id}>{p.name} ({p.price} ₽)</option>
+                  ))}
+                </select>
+              </div>
+
+              <button 
+                type="submit" 
+                className="btn btn-primary" 
+                disabled={isSubmittingReel}
+                style={{ width: '100%', height: '44px', borderRadius: 'var(--border-radius-sm)', marginTop: '8px' }}
+              >
+                {isSubmittingReel ? 'Публикация...' : 'Опубликовать рилс'}
+              </button>
+            </form>
+          </div>
+
+          {/* Список существующих рилсов */}
+          <div className="glass" style={{ borderRadius: 'var(--border-radius-md)', padding: '24px' }}>
+            <h2 style={{ fontSize: '20px', marginBottom: '20px' }}>Активные рилсы ({reels.length})</h2>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '550px', overflowY: 'auto', paddingRight: '8px' }}>
+              {reels.map(reel => {
+                const linkedProduct = products.find(p => p.id === reel.productId);
+                return (
+                  <div key={reel.id} style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '16px',
+                    padding: '12px',
+                    borderRadius: 'var(--border-radius-sm)',
+                    backgroundColor: 'var(--bg-tertiary)',
+                    border: '1px solid var(--border-color)'
+                  }}>
+                    <video src={reel.videoUrl} style={{ width: '50px', height: '65px', objectFit: 'cover', borderRadius: '4px', backgroundColor: '#000' }} />
+                    <div style={{ flexGrow: 1, minWidth: 0 }}>
+                      <h4 style={{ fontSize: '14px', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {reel.caption || 'Без описания'}
+                      </h4>
+                      <p style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '4px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        🔗 Товар: {linkedProduct ? linkedProduct.name : 'Не привязан'}
+                      </p>
+                    </div>
+                    <button 
+                      onClick={() => handleDeleteReel(reel.id)}
+                      style={{ color: 'var(--text-tertiary)', padding: '8px' }}
+                      onMouseEnter={(e) => e.currentTarget.style.color = 'var(--accent-pink)'}
+                      onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-tertiary)'}
+                      title="Удалить рилс"
                     >
                       <Trash2 size={16} />
                     </button>

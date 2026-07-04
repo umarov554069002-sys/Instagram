@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ShoppingBag, User, Sun, Moon, LogOut, Package2, Shield, Send } from 'lucide-react';
+import { ShoppingBag, User, Sun, Moon, LogOut, Package2, Shield, Send, Film } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 
@@ -106,6 +106,25 @@ export default function Header() {
         >
           {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
         </button>
+
+        {/* Рилсы (Reels) */}
+        <Link 
+          to="/reels" 
+          style={{
+            position: 'relative',
+            width: '40px',
+            height: '40px',
+            borderRadius: '50%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: 'var(--bg-tertiary)',
+            color: 'var(--text-primary)'
+          }}
+          title="Рилсы (Reels)"
+        >
+          <Film size={18} />
+        </Link>
 
         {/* Сообщения (Direct) */}
         <Link 
