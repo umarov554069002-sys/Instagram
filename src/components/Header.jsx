@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ShoppingBag, User, Sun, Moon, LogOut, Package2, Shield, Send, Film } from 'lucide-react';
+import { ShoppingBag, User, Sun, Moon, LogOut, Package2, Shield, Send, Film, Heart } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
+import { useFavorites } from '../context/FavoritesContext';
 
 export default function Header() {
   const { getItemsCount } = useCart();
   const { currentUser, logout, isDemo } = useAuth();
+  const { getFavoritesCount } = useFavorites();
   const navigate = useNavigate();
   
   // Управление темой оформления (темная/светлая)
@@ -143,6 +145,45 @@ export default function Header() {
           title="Сообщения (Direct)"
         >
           <Send size={18} style={{ transform: 'rotate(-45deg)', margin: '0 0 2px 2px' }} />
+        </Link>
+
+        {/* Избранное */}
+        <Link 
+          to="/favorites" 
+          style={{
+            position: 'relative',
+            width: '40px',
+            height: '40px',
+            borderRadius: '50%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: 'var(--bg-tertiary)',
+            color: 'var(--text-primary)'
+          }}
+          title="Избранное"
+        >
+          <Heart size={18} />
+          {getFavoritesCount() > 0 && (
+            <span style={{
+              position: 'absolute',
+              top: '-4px',
+              right: '-4px',
+              background: 'var(--accent-gradient)',
+              color: 'white',
+              fontSize: '10px',
+              fontWeight: '700',
+              borderRadius: '50%',
+              width: '18px',
+              height: '18px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              boxShadow: '0 2px 6px rgba(225, 48, 108, 0.3)'
+            }}>
+              {getFavoritesCount()}
+            </span>
+          )}
         </Link>
 
         {/* Корзина */}

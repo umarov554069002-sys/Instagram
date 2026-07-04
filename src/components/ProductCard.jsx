@@ -1,14 +1,23 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { ShoppingCart } from 'lucide-react';
+import { ShoppingCart, Heart } from 'lucide-react';
 import { useCart } from '../context/CartContext';
+import { useFavorites } from '../context/FavoritesContext';
 
 export default function ProductCard({ product }) {
   const { addToCart } = useCart();
+  const { isFavorite, toggleFavorite } = useFavorites();
+  
+  const isFav = isFavorite(product.id);
 
   const handleAddToCart = (e) => {
-    e.preventDefault(); // Чтобы клик по кнопке не перенаправлял на детальную страницу
+    e.preventDefault(); 
     addToCart(product);
+  };
+
+  const handleToggleFavorite = (e) => {
+    e.preventDefault();
+    toggleFavorite(product);
   };
 
   return (
@@ -29,6 +38,35 @@ export default function ProductCard({ product }) {
       e.currentTarget.style.transform = 'translateY(0)';
       e.currentTarget.style.boxShadow = 'var(--shadow-sm)';
     }}>
+      
+      {/* Кнопка "Лайк / Избранное" */}
+      <button 
+        onClick={handleToggleFavorite}
+        style={{
+          position: 'absolute',
+          top: '12px',
+          right: '12px',
+          zIndex: 10,
+          width: '36px',
+          height: '36px',
+          borderRadius: '50%',
+          backgroundColor: 'var(--glass-bg)',
+          backdropFilter: 'blur(4px)',
+          border: '1px solid var(--glass-border)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: isFav ? 'var(--accent-pink)' : 'var(--text-primary)',
+          boxShadow: 'var(--shadow-sm)',
+          transition: 'transform var(--transition-fast)'
+        }}
+        onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.1)'}
+        onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+        title={isFav ? "Убрать из избранного" : "Добавить в избранное"}
+      >
+        <Heart size={18} fill={isFav ? 'var(--accent-pink)' : 'none'} />
+      </button>
+
       {/* Ссылка на детальную страницу */}
       <Link to={`/product/${product.id}`} style={{ display: 'block', overflow: 'hidden', aspectRatio: '1/1', position: 'relative' }}>
         <img 
