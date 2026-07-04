@@ -7,6 +7,7 @@ import ProductDetails from './pages/ProductDetails';
 import Cart from './pages/Cart';
 import Auth from './pages/Auth';
 import Admin from './pages/Admin';
+import Messages from './pages/Messages';
 import { useAuth } from './context/AuthContext';
 
 // Защищенный роут для админки
@@ -29,6 +30,7 @@ export default function App() {
           <Route path="/product/:id" element={<ProductDetails />} />
           <Route path="/cart" element={<Cart />} />
           <Route path="/auth" element={<Auth />} />
+          <Route path="/messages" element={<Messages />} />
           <Route 
             path="/admin" 
             element={

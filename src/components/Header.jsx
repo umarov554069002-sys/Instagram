@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ShoppingBag, User, Sun, Moon, LogOut, Package2, Shield } from 'lucide-react';
+import { ShoppingBag, User, Sun, Moon, LogOut, Package2, Shield, Send } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 
@@ -106,6 +106,25 @@ export default function Header() {
         >
           {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
         </button>
+
+        {/* Сообщения (Direct) */}
+        <Link 
+          to="/messages" 
+          style={{
+            position: 'relative',
+            width: '40px',
+            height: '40px',
+            borderRadius: '50%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: 'var(--bg-tertiary)',
+            color: 'var(--text-primary)'
+          }}
+          title="Сообщения (Direct)"
+        >
+          <Send size={18} style={{ transform: 'rotate(-45deg)', margin: '0 0 2px 2px' }} />
+        </Link>
 
         {/* Корзина */}
         <Link 
