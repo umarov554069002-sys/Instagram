@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { Package, ClipboardList, Plus, Trash2, Tag, ShieldCheck } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
+import { Package, ClipboardList, Plus, Trash2, Tag, ShieldCheck, Image } from 'lucide-react';
 import { MOCK_PRODUCTS } from '../mockData';
 
 export default function Admin() {
-  const [activeTab, setActiveTab] = useState('products'); // products, orders
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [activeTab, setActiveTab] = useState('products'); // products, orders, stories
   const [products, setProducts] = useState(MOCK_PRODUCTS);
   const [orders, setOrders] = useState([]);
+  const [stories, setStories] = useState([]);
   
   // Поля формы нового товара
   const [name, setName] = useState('');
@@ -15,11 +18,42 @@ export default function Admin() {
   const [image, setImage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Загружаем заказы из localStorage (созданные пользователем во время сессии)
+  // Поля формы новой истории
+  const [storyTitle, setStoryTitle] = useState('');
+  const [storyImage, setStoryImage] = useState('');
+  const [storyProduct, setStoryProduct] = useState('');
+  const [isSubmittingStory, setIsSubmittingStory] = useState(false);
+
+  // Синхронизация таба с URL-параметром (например, ?tab=stories)
   useEffect(() => {
+    const tabParam = searchParams.get('tab');
+    if (tabParam && ['products', 'orders', 'stories'].includes(tabParam)) {
+      setActiveTab(tabParam);
+    } else {
+      setActiveTab('products');
+    }
+  }, [searchParams]);
+
+  const handleTabChange = (tabName) => {
+    setActiveTab(tabName);
+    searchParams.set('tab', tabName);
+    setSearchParams(searchParams);
+  };
+
+  // Загружаем данные из localStorage
+  useEffect(() => {
+    // Заказы
     const savedOrders = localStorage.getItem('demo_orders') || '[]';
     try {
       setOrders(JSON.parse(savedOrders));
+    } catch (e) {
+      console.error(e);
+    }
+
+    // Истории
+    const savedStories = localStorage.getItem('demo_stories') || '[]';
+    try {
+      setStories(JSON.parse(savedStories));
     } catch (e) {
       console.error(e);
     }
@@ -40,26 +74,20 @@ export default function Admin() {
       reviews: 0
     };
 
-    // Пытаемся вызвать Netlify Function (/api/admin-add-product или аналогичный)
     try {
-      const response = await fetch('/api/admin-add-product', {
+      await fetch('/api/admin-add-product', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newProduct)
       });
-      // Имитируем сетевую задержку
-      await new Promise(resolve => setTimeout(resolve, 800));
+      await new Promise(resolve => setTimeout(resolve, 600));
     } catch (err) {
-      console.warn("Netlify Serverless Function не запущена локально. Сохраняем товар в локальном состоянии фронтенда.");
-      await new Promise(resolve => setTimeout(resolve, 800));
+      await new Promise(resolve => setTimeout(resolve, 600));
     }
 
     setProducts(prev => [newProduct, ...prev]);
     MOCK_PRODUCTS.unshift(newProduct); // Добавляем в глобальный кэш
     
-    // Сброс формы
     setName('');
     setPrice('');
     setDescription('');
@@ -73,6 +101,48 @@ export default function Admin() {
       setProducts(prev => prev.filter(p => p.id !== productId));
       const idx = MOCK_PRODUCTS.findIndex(p => p.id === productId);
       if (idx > -1) MOCK_PRODUCTS.splice(idx, 1);
+    }
+  };
+
+  const handleAddStory = async (e) => {
+    e.preventDefault();
+    setIsSubmittingStory(true);
+
+    const newStory = {
+      id: 'story-' + Date.now(),
+      title: storyTitle,
+      image: storyImage || 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=600&auto=format&fit=crop&q=80',
+      productId: storyProduct,
+      viewed: false
+    };
+
+    try {
+      await fetch('/api/admin-add-story', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newStory)
+      });
+      await new Promise(resolve => setTimeout(resolve, 600));
+    } catch (err) {
+      await new Promise(resolve => setTimeout(resolve, 600));
+    }
+
+    const updatedStories = [newStory, ...stories];
+    setStories(updatedStories);
+    localStorage.setItem('demo_stories', JSON.stringify(updatedStories));
+
+    setStoryTitle('');
+    setStoryImage('');
+    setStoryProduct('');
+    setIsSubmittingStory(false);
+    alert('История успешно добавлена!');
+  };
+
+  const handleDeleteStory = (storyId) => {
+    if (window.confirm('Вы действительно хотите удалить эту историю?')) {
+      const updatedStories = stories.filter(s => s.id !== storyId);
+      setStories(updatedStories);
+      localStorage.setItem('demo_stories', JSON.stringify(updatedStories));
     }
   };
 
@@ -96,9 +166,9 @@ export default function Admin() {
       </div>
 
       {/* Переключение табов */}
-      <div style={{ display: 'flex', gap: '16px', marginBottom: '32px', borderBottom: '1px solid var(--border-color)', paddingBottom: '12px' }}>
+      <div style={{ display: 'flex', gap: '16px', marginBottom: '32px', borderBottom: '1px solid var(--border-color)', paddingBottom: '12px', overflowX: 'auto' }}>
         <button
-          onClick={() => setActiveTab('products')}
+          onClick={() => handleTabChange('products')}
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -114,8 +184,27 @@ export default function Admin() {
         >
           <Package size={16} /> Управление товарами
         </button>
+
         <button
-          onClick={() => setActiveTab('orders')}
+          onClick={() => handleTabChange('stories')}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            padding: '10px 20px',
+            borderRadius: 'var(--border-radius-sm)',
+            fontWeight: 600,
+            fontSize: '14px',
+            backgroundColor: activeTab === 'stories' ? 'var(--accent-gradient)' : 'transparent',
+            color: activeTab === 'stories' ? 'white' : 'var(--text-secondary)',
+            transition: 'all 0.2s'
+          }}
+        >
+          <Image size={16} /> Истории ({stories.length})
+        </button>
+
+        <button
+          onClick={() => handleTabChange('orders')}
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -133,8 +222,8 @@ export default function Admin() {
         </button>
       </div>
 
-      {/* Контент табов */}
-      {activeTab === 'products' ? (
+      {/* Контент таба: Товары */}
+      {activeTab === 'products' && (
         <div style={{
           display: 'grid',
           gridTemplateColumns: '1.2fr 1.8fr',
@@ -152,7 +241,7 @@ export default function Admin() {
                 <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)' }}>Название товара</label>
                 <input 
                   type="text" 
-                  placeholder="Например: Стильный рюкзак City" 
+                  placeholder="Например: Стильный свитшот" 
                   required 
                   value={name}
                   onChange={(e) => setName(e.target.value)}
@@ -257,10 +346,118 @@ export default function Admin() {
             </div>
           </div>
         </div>
-      ) : (
-        /* Список заказов */
+      )}
+
+      {/* Контент таба: Истории */}
+      {activeTab === 'stories' && (
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: '1.2fr 1.8fr',
+          gap: '40px',
+          alignItems: 'start'
+        }}>
+          {/* Форма создания истории */}
+          <div className="glass" style={{ borderRadius: 'var(--border-radius-md)', padding: '24px' }}>
+            <h2 style={{ fontSize: '20px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Plus size={18} /> Опубликовать историю
+            </h2>
+            
+            <form onSubmit={handleAddStory} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)' }}>Заголовок истории</label>
+                <input 
+                  type="text" 
+                  placeholder="Например: Скидки -50%" 
+                  required 
+                  value={storyTitle}
+                  onChange={(e) => setStoryTitle(e.target.value)}
+                />
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)' }}>Ссылка на изображение истории (вертикальное)</label>
+                <input 
+                  type="url" 
+                  placeholder="https://images.unsplash.com/..." 
+                  required
+                  value={storyImage}
+                  onChange={(e) => setStoryImage(e.target.value)}
+                />
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)' }}>Привязать к товару</label>
+                <select 
+                  value={storyProduct} 
+                  onChange={(e) => setStoryProduct(e.target.value)}
+                  style={{ height: '42px' }}
+                  required
+                >
+                  <option value="">Выберите товар для перехода...</option>
+                  {products.map(p => (
+                    <option key={p.id} value={p.id}>{p.name} ({p.price} ₽)</option>
+                  ))}
+                </select>
+              </div>
+
+              <button 
+                type="submit" 
+                className="btn btn-primary" 
+                disabled={isSubmittingStory}
+                style={{ width: '100%', height: '44px', borderRadius: 'var(--border-radius-sm)', marginTop: '8px' }}
+              >
+                {isSubmittingStory ? 'Опубликование...' : 'Опубликовать'}
+              </button>
+            </form>
+          </div>
+
+          {/* Список существующих историй */}
+          <div className="glass" style={{ borderRadius: 'var(--border-radius-md)', padding: '24px' }}>
+            <h2 style={{ fontSize: '20px', marginBottom: '20px' }}>Активные истории ({stories.length})</h2>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '550px', overflowY: 'auto', paddingRight: '8px' }}>
+              {stories.map(story => {
+                const linkedProduct = products.find(p => p.id === story.productId);
+                return (
+                  <div key={story.id} style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '16px',
+                    padding: '12px',
+                    borderRadius: 'var(--border-radius-sm)',
+                    backgroundColor: 'var(--bg-tertiary)',
+                    border: '1px solid var(--border-color)'
+                  }}>
+                    <img src={story.image} alt={story.title} style={{ width: '50px', height: '65px', objectFit: 'cover', borderRadius: '4px' }} />
+                    <div style={{ flexGrow: 1, minWidth: 0 }}>
+                      <h4 style={{ fontSize: '14px', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {story.title}
+                      </h4>
+                      <p style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '4px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        🔗 Товар: {linkedProduct ? linkedProduct.name : 'Не привязан'}
+                      </p>
+                    </div>
+                    <button 
+                      onClick={() => handleDeleteStory(story.id)}
+                      style={{ color: 'var(--text-tertiary)', padding: '8px' }}
+                      onMouseEnter={(e) => e.currentTarget.style.color = 'var(--accent-pink)'}
+                      onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-tertiary)'}
+                      title="Удалить историю"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Контент таба: Заказы */}
+      {activeTab === 'orders' && (
         <div className="glass" style={{ borderRadius: 'var(--border-radius-md)', padding: '24px' }}>
-          <h2 style={{ fontSize: '20px', marginBottom: '20px' }}>Поступившие заказы</h2>
+          <h2 style={{ fontSize: '20px', marginBottom: '20px' }}>Поступившие заказы ({orders.length})</h2>
           
           {orders.length > 0 ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>

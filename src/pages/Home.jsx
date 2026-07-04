@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { ArrowRight, Truck, RotateCcw, ShieldCheck, Heart } from 'lucide-react';
 import { MOCK_PRODUCTS } from '../mockData';
 import ProductCard from '../components/ProductCard';
+import Stories from '../components/Stories';
 
 export default function Home() {
   // Показываем первые 3 товара как рекомендуемые
@@ -17,6 +18,11 @@ export default function Home() {
 
   return (
     <div className="animate-fade-in" style={{ paddingBottom: '60px' }}>
+      {/* Истории */}
+      <div className="container" style={{ borderBottom: '1px solid var(--border-color)', overflow: 'hidden' }}>
+        <Stories />
+      </div>
+
       {/* Hero-секция */}
       <section style={{
         position: 'relative',
