@@ -1,0 +1,313 @@
+import React, { useState, useEffect } from 'react';
+import { Package, ClipboardList, Plus, Trash2, Tag, ShieldCheck } from 'lucide-react';
+import { MOCK_PRODUCTS } from '../mockData';
+
+export default function Admin() {
+  const [activeTab, setActiveTab] = useState('products'); // products, orders
+  const [products, setProducts] = useState(MOCK_PRODUCTS);
+  const [orders, setOrders] = useState([]);
+  
+  // Поля формы нового товара
+  const [name, setName] = useState('');
+  const [price, setPrice] = useState('');
+  const [category, setCategory] = useState('Одежда');
+  const [description, setDescription] = useState('');
+  const [image, setImage] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Загружаем заказы из localStorage (созданные пользователем во время сессии)
+  useEffect(() => {
+    const savedOrders = localStorage.getItem('demo_orders') || '[]';
+    try {
+      setOrders(JSON.parse(savedOrders));
+    } catch (e) {
+      console.error(e);
+    }
+  }, [activeTab]);
+
+  const handleAddProduct = async (e) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+
+    const newProduct = {
+      id: 'prod-' + (products.length + 1) + '-' + Math.random().toString(36).substr(2, 5),
+      name,
+      price: Number(price),
+      category,
+      description,
+      image: image || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500&auto=format&fit=crop&q=60',
+      rating: 5.0,
+      reviews: 0
+    };
+
+    // Пытаемся вызвать Netlify Function (/api/admin-add-product или аналогичный)
+    try {
+      const response = await fetch('/api/admin-add-product', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(newProduct)
+      });
+      // Имитируем сетевую задержку
+      await new Promise(resolve => setTimeout(resolve, 800));
+    } catch (err) {
+      console.warn("Netlify Serverless Function не запущена локально. Сохраняем товар в локальном состоянии фронтенда.");
+      await new Promise(resolve => setTimeout(resolve, 800));
+    }
+
+    setProducts(prev => [newProduct, ...prev]);
+    MOCK_PRODUCTS.unshift(newProduct); // Добавляем в глобальный кэш
+    
+    // Сброс формы
+    setName('');
+    setPrice('');
+    setDescription('');
+    setImage('');
+    setIsSubmitting(false);
+    alert('Товар успешно добавлен!');
+  };
+
+  const handleDeleteProduct = (productId) => {
+    if (window.confirm('Вы действительно хотите удалить этот товар?')) {
+      setProducts(prev => prev.filter(p => p.id !== productId));
+      const idx = MOCK_PRODUCTS.findIndex(p => p.id === productId);
+      if (idx > -1) MOCK_PRODUCTS.splice(idx, 1);
+    }
+  };
+
+  return (
+    <div className="container animate-fade-in" style={{ padding: '120px 24px 80px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '40px' }}>
+        <h1 style={{ fontSize: '36px' }}>Панель администратора</h1>
+        <span style={{
+          backgroundColor: 'rgba(225, 48, 108, 0.1)',
+          color: 'var(--accent-pink)',
+          fontSize: '11px',
+          fontWeight: '700',
+          padding: '4px 10px',
+          borderRadius: 'var(--border-radius-full)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '4px'
+        }}>
+          <ShieldCheck size={12} /> ДОСТУП РАЗРЕШЕН
+        </span>
+      </div>
+
+      {/* Переключение табов */}
+      <div style={{ display: 'flex', gap: '16px', marginBottom: '32px', borderBottom: '1px solid var(--border-color)', paddingBottom: '12px' }}>
+        <button
+          onClick={() => setActiveTab('products')}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            padding: '10px 20px',
+            borderRadius: 'var(--border-radius-sm)',
+            fontWeight: 600,
+            fontSize: '14px',
+            backgroundColor: activeTab === 'products' ? 'var(--accent-gradient)' : 'transparent',
+            color: activeTab === 'products' ? 'white' : 'var(--text-secondary)',
+            transition: 'all 0.2s'
+          }}
+        >
+          <Package size={16} /> Управление товарами
+        </button>
+        <button
+          onClick={() => setActiveTab('orders')}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            padding: '10px 20px',
+            borderRadius: 'var(--border-radius-sm)',
+            fontWeight: 600,
+            fontSize: '14px',
+            backgroundColor: activeTab === 'orders' ? 'var(--accent-gradient)' : 'transparent',
+            color: activeTab === 'orders' ? 'white' : 'var(--text-secondary)',
+            transition: 'all 0.2s'
+          }}
+        >
+          <ClipboardList size={16} /> Заказы ({orders.length})
+        </button>
+      </div>
+
+      {/* Контент табов */}
+      {activeTab === 'products' ? (
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: '1.2fr 1.8fr',
+          gap: '40px',
+          alignItems: 'start'
+        }}>
+          {/* Форма создания товара */}
+          <div className="glass" style={{ borderRadius: 'var(--border-radius-md)', padding: '24px' }}>
+            <h2 style={{ fontSize: '20px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Plus size={18} /> Добавить товар
+            </h2>
+            
+            <form onSubmit={handleAddProduct} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)' }}>Название товара</label>
+                <input 
+                  type="text" 
+                  placeholder="Например: Стильный рюкзак City" 
+                  required 
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: '16px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flexGrow: 1 }}>
+                  <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)' }}>Цена (₽)</label>
+                  <input 
+                    type="number" 
+                    placeholder="3500" 
+                    required 
+                    min="1"
+                    value={price}
+                    onChange={(e) => setPrice(e.target.value)}
+                  />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flexGrow: 1 }}>
+                  <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)' }}>Категория</label>
+                  <select 
+                    value={category} 
+                    onChange={(e) => setCategory(e.target.value)}
+                    style={{ height: '42px' }}
+                  >
+                    <option value="Одежда">Одежда</option>
+                    <option value="Аксессуары">Аксессуары</option>
+                    <option value="Электроника">Электроника</option>
+                    <option value="Косметика">Косметика</option>
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)' }}>Ссылка на изображение</label>
+                <input 
+                  type="url" 
+                  placeholder="https://images.unsplash.com/..." 
+                  value={image}
+                  onChange={(e) => setImage(e.target.value)}
+                />
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)' }}>Описание товара</label>
+                <textarea 
+                  placeholder="Введите подробное описание..." 
+                  required 
+                  rows="4"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  style={{ resize: 'none' }}
+                />
+              </div>
+
+              <button 
+                type="submit" 
+                className="btn btn-primary" 
+                disabled={isSubmitting}
+                style={{ width: '100%', height: '44px', borderRadius: 'var(--border-radius-sm)', marginTop: '8px' }}
+              >
+                {isSubmitting ? 'Добавление...' : 'Создать товар'}
+              </button>
+            </form>
+          </div>
+
+          {/* Список существующих товаров */}
+          <div className="glass" style={{ borderRadius: 'var(--border-radius-md)', padding: '24px' }}>
+            <h2 style={{ fontSize: '20px', marginBottom: '20px' }}>Список товаров ({products.length})</h2>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '550px', overflowY: 'auto', paddingRight: '8px' }}>
+              {products.map(product => (
+                <div key={product.id} style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '16px',
+                  padding: '12px',
+                  borderRadius: 'var(--border-radius-sm)',
+                  backgroundColor: 'var(--bg-tertiary)',
+                  border: '1px solid var(--border-color)'
+                }}>
+                  <img src={product.image} alt={product.name} style={{ width: '50px', height: '50px', objectFit: 'cover', borderRadius: '4px' }} />
+                  <div style={{ flexGrow: 1, minWidth: 0 }}>
+                    <h4 style={{ fontSize: '14px', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {product.name}
+                    </h4>
+                    <span style={{ fontSize: '12px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <Tag size={12} /> {product.category} | {product.price.toLocaleString()} ₽
+                    </span>
+                  </div>
+                  <button 
+                    onClick={() => handleDeleteProduct(product.id)}
+                    style={{ color: 'var(--text-tertiary)', padding: '8px' }}
+                    onMouseEnter={(e) => e.currentTarget.style.color = 'var(--accent-pink)'}
+                    onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-tertiary)'}
+                    title="Удалить товар"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      ) : (
+        /* Список заказов */
+        <div className="glass" style={{ borderRadius: 'var(--border-radius-md)', padding: '24px' }}>
+          <h2 style={{ fontSize: '20px', marginBottom: '20px' }}>Поступившие заказы</h2>
+          
+          {orders.length > 0 ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {orders.map((order, idx) => (
+                <div key={idx} style={{
+                  padding: '20px',
+                  borderRadius: 'var(--border-radius-sm)',
+                  backgroundColor: 'var(--bg-tertiary)',
+                  border: '1px solid var(--border-color)'
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
+                    <span>Заказ <strong className="gradient-text">{order.orderId}</strong></span>
+                    <span style={{ fontWeight: 700 }}>{order.total.toLocaleString()} ₽</span>
+                  </div>
+                  <div style={{ fontSize: '13px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
+                    <div>
+                      <p style={{ color: 'var(--text-secondary)', marginBottom: '4px' }}>Получатель:</p>
+                      <p style={{ fontWeight: 500 }}>{order.customer.name}</p>
+                      <p>{order.customer.phone}</p>
+                      <p style={{ color: 'var(--text-tertiary)' }}>{order.customer.email}</p>
+                    </div>
+                    <div>
+                      <p style={{ color: 'var(--text-secondary)', marginBottom: '4px' }}>Адрес доставки:</p>
+                      <p style={{ fontWeight: 500 }}>{order.customer.address}</p>
+                    </div>
+                  </div>
+                  <div>
+                    <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '6px' }}>Товары в заказе:</p>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      {order.items.map((item, i) => (
+                        <div key={i} style={{ fontSize: '13px', display: 'flex', justifyContent: 'space-between' }}>
+                          <span>• {item.name} x {item.quantity}</span>
+                          <span>{item.price * item.quantity} ₽</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div style={{ textAlign: 'center', padding: '48px 24px', color: 'var(--text-secondary)' }}>
+              Заказов пока нет. Оформите покупку из корзины, чтобы увидеть ее в списке!
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
