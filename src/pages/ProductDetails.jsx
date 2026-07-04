@@ -1,19 +1,33 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, ShoppingCart, ShieldCheck, Heart, Star } from 'lucide-react';
+import { ArrowLeft, ShoppingCart, ShieldCheck, Heart, Star, User, MessageSquare } from 'lucide-react';
 import { MOCK_PRODUCTS } from '../mockData';
 import { useCart } from '../context/CartContext';
+
+// Стартовые отзывы
+const SEED_REVIEWS = [
+  { id: 'rev-1', author: 'Елена', rating: 5, text: 'Очень понравился товар! Качество ткани потрясающее, сидит супер. Доставили на следующий день!', date: '2026-06-25T10:30:00.000Z' },
+  { id: 'rev-2', author: 'Дмитрий', rating: 4, text: 'Хорошее качество, плотный материал. На рост 180 подошел отлично. Слегка оверсайз.', date: '2026-06-28T14:15:00.000Z' }
+];
 
 export default function ProductDetails() {
   const { id } = useParams();
   const { addToCart } = useCart();
+  
   const [quantity, setQuantity] = useState(1);
   const [liked, setLiked] = useState(false);
+  
+  // Состояния для отзывов
+  const [reviews, setReviews] = useState([]);
+  const [reviewerName, setReviewerName] = useState('');
+  const [rating, setRating] = useState(5);
+  const [reviewText, setReviewText] = useState('');
+  const [hoverRating, setHoverRating] = useState(0);
 
   // Находим товар по ID
-  const product = MOCK_PRODUCTS.find(p => p.id === id);
+  const baseProduct = MOCK_PRODUCTS.find(p => p.id === id);
 
-  if (!product) {
+  if (!baseProduct) {
     return (
       <div className="container" style={{ padding: '150px 24px', textAlign: 'center' }}>
         <h2 style={{ fontSize: '28px', marginBottom: '16px' }}>Товар не найден</h2>
@@ -24,8 +38,60 @@ export default function ProductDetails() {
     );
   }
 
+  // Локальная копия товара с динамическим рейтингом
+  const [product, setProduct] = useState(baseProduct);
+
+  // Загрузка отзывов
+  useEffect(() => {
+    const saved = localStorage.getItem(`demo_reviews_${id}`);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      setReviews(parsed);
+      recalculateProductRating(parsed);
+    } else {
+      setReviews(SEED_REVIEWS);
+      localStorage.setItem(`demo_reviews_${id}`, JSON.stringify(SEED_REVIEWS));
+      recalculateProductRating(SEED_REVIEWS);
+    }
+  }, [id]);
+
+  const recalculateProductRating = (currentReviews) => {
+    if (currentReviews.length === 0) return;
+    const totalRating = currentReviews.reduce((sum, r) => sum + r.rating, 0);
+    const avg = parseFloat((totalRating / currentReviews.length).toFixed(1));
+    setProduct(prev => ({
+      ...prev,
+      rating: avg,
+      reviews: currentReviews.length
+    }));
+  };
+
   const handleAddToCart = () => {
     addToCart(product, quantity);
+  };
+
+  const handleSubmitReview = (e) => {
+    e.preventDefault();
+    if (!reviewerName.trim() || !reviewText.trim()) return;
+
+    const newReview = {
+      id: 'rev-' + Date.now(),
+      author: reviewerName.trim(),
+      rating: Number(rating),
+      text: reviewText.trim(),
+      date: new Date().toISOString()
+    };
+
+    const updatedReviews = [newReview, ...reviews];
+    setReviews(updatedReviews);
+    localStorage.setItem(`demo_reviews_${id}`, JSON.stringify(updatedReviews));
+    recalculateProductRating(updatedReviews);
+
+    // Сброс полей формы
+    setReviewerName('');
+    setReviewText('');
+    setRating(5);
+    alert('Отзыв успешно добавлен!');
   };
 
   return (
@@ -47,7 +113,8 @@ export default function ProductDetails() {
         display: 'grid',
         gridTemplateColumns: '1fr 1fr',
         gap: '48px',
-        alignItems: 'start'
+        alignItems: 'start',
+        marginBottom: '60px'
       }}>
         {/* Левая колонка - Изображение */}
         <div className="glass" style={{
@@ -190,7 +257,7 @@ export default function ProductDetails() {
             </button>
           </div>
 
-          {/* Особенности товара */}
+          {/* Характеристики товара */}
           {product.features && (
             <div className="glass" style={{
               borderRadius: 'var(--border-radius-md)',
@@ -210,6 +277,131 @@ export default function ProductDetails() {
           )}
         </div>
       </div>
+
+      {/* Раздел отзывов и комментариев */}
+      <section style={{ borderTop: '1px solid var(--border-color)', paddingTop: '48px' }}>
+        <h2 style={{ fontSize: '26px', marginBottom: '32px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <MessageSquare className="gradient-text" /> Отзывы покупателей ({reviews.length})
+        </h2>
+
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: '1.2fr 1.8fr',
+          gap: '40px',
+          alignItems: 'start'
+        }}>
+          {/* Форма написания отзыва */}
+          <div className="glass" style={{ borderRadius: 'var(--border-radius-md)', padding: '24px' }}>
+            <h3 style={{ fontSize: '18px', marginBottom: '20px' }}>Оставить отзыв</h3>
+            
+            <form onSubmit={handleSubmitReview} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)' }}>Ваше имя</label>
+                <input 
+                  type="text" 
+                  placeholder="Имя или никнейм" 
+                  required 
+                  value={reviewerName}
+                  onChange={(e) => setReviewerName(e.target.value)}
+                />
+              </div>
+
+              {/* Звездный рейтинг */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)' }}>Ваша оценка</label>
+                <div style={{ display: 'flex', gap: '6px', margin: '4px 0' }}>
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button
+                      key={star}
+                      type="button"
+                      onClick={() => setRating(star)}
+                      onMouseEnter={() => setHoverRating(star)}
+                      onMouseLeave={() => setHoverRating(0)}
+                      style={{ color: star <= (hoverRating || rating) ? '#ffcc00' : 'var(--text-tertiary)' }}
+                    >
+                      <Star size={24} fill={star <= (hoverRating || rating) ? '#ffcc00' : 'none'} />
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)' }}>Текст отзыва</label>
+                <textarea 
+                  placeholder="Поделитесь вашим мнением о качестве товара..." 
+                  required 
+                  rows="4"
+                  value={reviewText}
+                  onChange={(e) => setReviewText(e.target.value)}
+                  style={{ resize: 'none' }}
+                />
+              </div>
+
+              <button 
+                type="submit" 
+                className="btn btn-primary"
+                style={{ width: '100%', height: '44px', borderRadius: 'var(--border-radius-sm)', marginTop: '8px' }}
+              >
+                Отправить отзыв
+              </button>
+            </form>
+          </div>
+
+          {/* Список опубликованных отзывов */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {reviews.length > 0 ? (
+              reviews.map((rev) => (
+                <div key={rev.id} className="glass animate-fade-in" style={{
+                  borderRadius: 'var(--border-radius-md)',
+                  padding: '20px',
+                  display: 'flex',
+                  gap: '16px'
+                }}>
+                  {/* Заглушка аватара пользователя */}
+                  <div style={{
+                    width: '40px',
+                    height: '40px',
+                    borderRadius: '50%',
+                    backgroundColor: 'var(--bg-tertiary)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: 'var(--text-secondary)',
+                    flexShrink: 0
+                  }}>
+                    <User size={18} />
+                  </div>
+
+                  {/* Текст отзыва */}
+                  <div style={{ flexGrow: 1 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                      <h4 style={{ fontSize: '14px', fontWeight: 700 }}>{rev.author}</h4>
+                      <span style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>
+                        {new Date(rev.date).toLocaleDateString([], { day: 'numeric', month: 'long', year: 'numeric' })}
+                      </span>
+                    </div>
+
+                    {/* Звезды отзыва */}
+                    <div style={{ display: 'flex', gap: '2px', marginBottom: '8px', color: '#ffcc00' }}>
+                      {[1, 2, 3, 4, 5].map((s) => (
+                        <Star key={s} size={12} fill={s <= rev.rating ? '#ffcc00' : 'none'} strokeWidth={s <= rev.rating ? 0 : 2} />
+                      ))}
+                    </div>
+
+                    <p style={{ fontSize: '13.5px', lineHeight: '1.5', color: 'var(--text-secondary)', whiteSpace: 'pre-wrap' }}>
+                      {rev.text}
+                    </p>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="glass" style={{ borderRadius: 'var(--border-radius-md)', padding: '32px', textAlign: 'center', color: 'var(--text-secondary)' }}>
+                Пока отзывов нет. Будьте первыми, кто оставит свой отзыв!
+              </div>
+            )}
+          </div>
+        </div>
+      </section>
     </div>
   );
 }

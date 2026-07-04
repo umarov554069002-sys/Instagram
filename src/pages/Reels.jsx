@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Heart, Volume2, VolumeX, ShoppingBag, Music, ChevronUp, ChevronDown, Loader2 } from 'lucide-react';
+import { Heart, Volume2, VolumeX, ShoppingBag, Music, ChevronUp, ChevronDown, Loader2, MessageCircle, X, Send } from 'lucide-react';
 import { db } from '../firebase';
 import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { useCart } from '../context/CartContext';
 import { MOCK_PRODUCTS } from '../mockData';
 
-// Стартовые демо-рилсы с вертикальными видео (Pexels / Mixkit)
+// Стартовые демо-рилсы с вертикальными видео (Mixkit)
 const DEFAULT_REELS = [
   {
     id: 'reel-1',
@@ -37,16 +37,37 @@ const DEFAULT_REELS = [
   }
 ];
 
+// Стартовые комментарии для рилсов
+const SEED_COMMENTS = {
+  'reel-1': [
+    { id: 'c-1', author: 'Мария', text: 'Наушники просто космос! Купила такие на прошлой неделе 😍', date: '2026-07-02T10:00:00.000Z' },
+    { id: 'c-2', author: 'Иван', text: 'А шумоподавление реально работает в метро?', date: '2026-07-02T12:30:00.000Z' },
+    { id: 'c-3', author: 'instastore_official', text: 'Да, Иван! Активное шумоподавление ANC блокирует до 90% внешних шумов!', date: '2026-07-02T13:00:00.000Z' }
+  ],
+  'reel-2': [
+    { id: 'c-4', author: 'Кристина', text: 'Сумка нереально красивая! А есть в черном цвете?', date: '2026-07-03T09:15:00.000Z' },
+    { id: 'c-5', author: 'Менеджер Анна', text: 'Кристина, здравствуйте! В черном цвете ожидаем поступление на следующей неделе.', date: '2026-07-03T10:00:00.000Z' }
+  ],
+  'reel-3': [
+    { id: 'c-6', author: 'Артем', text: 'Плотный свитшот! Заказал себе черный оверсайз.', date: '2026-07-04T08:00:00.000Z' }
+  ]
+};
+
 export default function Reels() {
   const navigate = useNavigate();
-  const { addToCart } = useCart();
   const [reels, setReels] = useState([]);
   const [currentReelIdx, setCurrentReelIdx] = useState(0);
   const [muted, setMuted] = useState(true);
   const [loading, setLoading] = useState(true);
   const [showProductCard, setShowProductCard] = useState(true);
+  
+  // Состояния для комментариев рилсов
+  const [showComments, setShowComments] = useState(false);
+  const [comments, setComments] = useState([]);
+  const [newComment, setNewComment] = useState('');
 
   const videoRef = useRef(null);
+  const commentsEndRef = useRef(null);
   const isDemo = !db;
 
   // Загружаем рилсы
@@ -82,12 +103,28 @@ export default function Reels() {
     }
   }, [isDemo]);
 
+  // Загрузка комментариев для текущего рилса
+  useEffect(() => {
+    if (reels.length === 0) return;
+    const activeReelId = reels[currentReelIdx].id;
+    const savedComments = localStorage.getItem(`demo_reels_comments_${activeReelId}`);
+    
+    if (savedComments) {
+      setComments(JSON.parse(savedComments));
+    } else {
+      const seed = SEED_COMMENTS[activeReelId] || [];
+      setComments(seed);
+      localStorage.setItem(`demo_reels_comments_${activeReelId}`, JSON.stringify(seed));
+    }
+  }, [currentReelIdx, reels]);
+
   // Воспроизведение видео при смене рилса
   useEffect(() => {
     if (videoRef.current) {
       videoRef.current.load();
       videoRef.current.play().catch(e => console.log("Браузер заблокировал автовоспроизведение:", e));
       setShowProductCard(true); // Показываем карточку товара при переключении
+      setShowComments(false); // Закрываем комментарии при переходе на новое видео
     }
   }, [currentReelIdx, reels]);
 
@@ -121,6 +158,53 @@ export default function Reels() {
     }
   };
 
+  const handleSendComment = (e) => {
+    e.preventDefault();
+    if (!newComment.trim() || reels.length === 0) return;
+
+    const activeReelId = reels[currentReelIdx].id;
+    const commentObj = {
+      id: 'c-' + Date.now(),
+      author: 'Покупатель',
+      text: newComment.trim(),
+      date: new Date().toISOString()
+    };
+
+    const updatedComments = [...comments, commentObj];
+    setComments(updatedComments);
+    localStorage.setItem(`demo_reels_comments_${activeReelId}`, JSON.stringify(updatedComments));
+    setNewComment('');
+
+    // Автопрокрутка комментариев вниз
+    setTimeout(() => {
+      commentsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, 100);
+
+    // Авто-ответ бота для интерактива
+    simulateBotCommentReply(newComment.trim(), activeReelId);
+  };
+
+  const simulateBotCommentReply = (userComment, reelId) => {
+    if (userComment.toLowerCase().includes('цена') || userComment.toLowerCase().includes('сколько')) {
+      setTimeout(() => {
+        const botReply = {
+          id: 'c-bot-' + Date.now(),
+          author: 'instastore_official',
+          text: linkedProduct 
+            ? `Здравствуйте! Стоимость этого товара составляет ${linkedProduct.price.toLocaleString()} ₽. Вы можете перейти к покупке по кнопке с корзиной справа!`
+            : 'Здравствуйте! Перейдите к покупке по кнопке с корзиной.',
+          date: new Date().toISOString()
+        };
+        setComments(prev => {
+          const next = [...prev, botReply];
+          localStorage.setItem(`demo_reels_comments_${reelId}`, JSON.stringify(next));
+          return next;
+        });
+        setTimeout(() => commentsEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 50);
+      }, 1500);
+    }
+  };
+
   if (loading) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 'calc(100vh - var(--header-height))', padding: '100px' }}>
@@ -132,7 +216,7 @@ export default function Reels() {
   if (reels.length === 0) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: 'calc(100vh - var(--header-height))', padding: '40px', textAlign: 'center' }}>
-        <Film size={48} color="var(--text-tertiary)" style={{ marginBottom: '16px' }} />
+        <Loader2 size={48} color="var(--text-tertiary)" style={{ marginBottom: '16px' }} />
         <h3>Рилсов пока нет</h3>
         <p style={{ color: 'var(--text-secondary)' }}>Зайдите в админ-панель, чтобы опубликовать первое видео!</p>
       </div>
@@ -140,7 +224,6 @@ export default function Reels() {
   }
 
   const activeReel = reels[currentReelIdx];
-  // Находим привязанный товар из каталога (локального или MOCK)
   const linkedProduct = MOCK_PRODUCTS.find(p => p.id === activeReel.productId);
 
   return (
@@ -195,7 +278,6 @@ export default function Reels() {
             objectFit: 'cover'
           }}
           onClick={() => {
-            // Клик по видео ставит на паузу или возобновляет
             if (videoRef.current) {
               if (videoRef.current.paused) {
                 videoRef.current.play();
@@ -231,7 +313,6 @@ export default function Reels() {
                 alignItems: 'center',
                 justifyContent: 'center'
               }}
-              title="Предыдущее видео"
             >
               <ChevronUp size={20} />
             </button>
@@ -251,14 +332,13 @@ export default function Reels() {
                 alignItems: 'center',
                 justifyContent: 'center'
               }}
-              title="Следующее видео"
             >
               <ChevronDown size={20} />
             </button>
           )}
         </div>
 
-        {/* Боковые кнопки управления (Лайк, Звук, Ссылка на товар) */}
+        {/* Боковые кнопки управления (Лайк, Комментарии, Звук, Ссылка на товар) */}
         <div style={{
           position: 'absolute',
           right: '16px',
@@ -266,7 +346,7 @@ export default function Reels() {
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          gap: '20px',
+          gap: '18px',
           zIndex: 10
         }}>
           {/* Лайк */}
@@ -291,8 +371,32 @@ export default function Reels() {
             >
               <Heart size={22} fill={activeReel.liked ? 'var(--accent-pink)' : 'none'} />
             </button>
-            <span style={{ color: 'white', fontSize: '11px', fontWeight: 600, marginTop: '6px', textShadow: '0 2px 4px rgba(0,0,0,0.8)' }}>
+            <span style={{ color: 'white', fontSize: '11px', fontWeight: 600, marginTop: '5px', textShadow: '0 2px 4px rgba(0,0,0,0.8)' }}>
               {activeReel.likes}
+            </span>
+          </div>
+
+          {/* Комментарии */}
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            <button
+              onClick={() => setShowComments(!showComments)}
+              style={{
+                width: '46px',
+                height: '46px',
+                borderRadius: '50%',
+                backgroundColor: showComments ? 'var(--accent-pink)' : 'rgba(0,0,0,0.6)',
+                backdropFilter: 'blur(4px)',
+                border: '1px solid rgba(255,255,255,0.15)',
+                color: 'white',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+            >
+              <MessageCircle size={22} />
+            </button>
+            <span style={{ color: 'white', fontSize: '11px', fontWeight: 600, marginTop: '5px', textShadow: '0 2px 4px rgba(0,0,0,0.8)' }}>
+              {comments.length}
             </span>
           </div>
 
@@ -311,7 +415,6 @@ export default function Reels() {
               alignItems: 'center',
               justifyContent: 'center'
             }}
-            title={muted ? "Включить звук" : "Выключить звук"}
           >
             {muted ? <VolumeX size={20} /> : <Volume2 size={20} />}
           </button>
@@ -334,7 +437,6 @@ export default function Reels() {
                 boxShadow: showProductCard ? '0 4px 10px rgba(225,48,108,0.3)' : 'none',
                 transition: 'all 0.2s'
               }}
-              title="Показать товар"
             >
               <ShoppingBag size={20} />
             </button>
@@ -353,7 +455,6 @@ export default function Reels() {
           zIndex: 9,
           pointerEvents: 'none'
         }}>
-          {/* Аккаунт */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
             <div className="gradient-bg" style={{ width: '28px', height: '28px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1px' }}>
               <div style={{ width: '100%', height: '100%', borderRadius: '50%', backgroundColor: '#000', overflow: 'hidden' }}>
@@ -370,7 +471,6 @@ export default function Reels() {
             }}>Магазин</span>
           </div>
 
-          {/* Описание */}
           <p style={{
             fontSize: '13px',
             lineHeight: '1.4',
@@ -384,7 +484,6 @@ export default function Reels() {
             {activeReel.caption}
           </p>
 
-          {/* Бегущий звук трека */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', opacity: 0.8 }}>
             <Music size={12} />
             <div style={{ overflow: 'hidden', whiteSpace: 'nowrap', width: '200px' }}>
@@ -400,7 +499,7 @@ export default function Reels() {
         </div>
 
         {/* Слайд-карточка привязанного товара */}
-        {linkedProduct && showProductCard && (
+        {linkedProduct && showProductCard && !showComments && (
           <div className="animate-fade-in" style={{
             position: 'absolute',
             bottom: '95px',
@@ -443,13 +542,140 @@ export default function Reels() {
             </button>
           </div>
         )}
+
+        {/* Выдвижное оверлей-окно комментариев рилса */}
+        {showComments && (
+          <div className="animate-fade-in" style={{
+            position: 'absolute',
+            bottom: 0,
+            left: 0,
+            width: '100%',
+            height: '350px',
+            backgroundColor: 'rgba(255, 255, 255, 0.98)',
+            color: '#262626',
+            borderRadius: 'var(--border-radius-lg) var(--border-radius-lg) 0 0',
+            boxShadow: '0 -8px 24px rgba(0,0,0,0.4)',
+            zIndex: 15,
+            display: 'flex',
+            flexDirection: 'column',
+            animation: 'slideUp 0.3s cubic-bezier(0.1, 1, 0.1, 1) forwards'
+          }}>
+            {/* Хедер панели комментариев */}
+            <div style={{
+              padding: '14px 20px',
+              borderBottom: '1px solid var(--border-color)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between'
+            }}>
+              <span style={{ fontSize: '14px', fontWeight: 700 }}>Комментарии ({comments.length})</span>
+              <button 
+                onClick={() => setShowComments(false)}
+                style={{ color: 'var(--text-secondary)' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Список комментариев */}
+            <div style={{
+              flexGrow: 1,
+              padding: '16px 20px',
+              overflowY: 'auto',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '12px'
+            }}>
+              {comments.map(c => {
+                const isSystem = c.author === 'instastore_official' || c.author.includes('Менеджер');
+                return (
+                  <div key={c.id} style={{ display: 'flex', gap: '10px', fontSize: '13px', alignItems: 'flex-start' }}>
+                    <div style={{
+                      width: '28px',
+                      height: '28px',
+                      borderRadius: '50%',
+                      backgroundColor: isSystem ? 'rgba(225,48,108,0.1)' : 'var(--bg-tertiary)',
+                      color: isSystem ? 'var(--accent-pink)' : 'var(--text-secondary)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontWeight: 700,
+                      fontSize: '11px',
+                      flexShrink: 0
+                    }}>
+                      {c.author.substring(0, 1).toUpperCase()}
+                    </div>
+                    <div>
+                      <div>
+                        <strong style={{ color: isSystem ? 'var(--accent-pink)' : 'inherit', marginRight: '6px' }}>{c.author}</strong>
+                        <span style={{ color: 'var(--text-tertiary)', fontSize: '10px' }}>
+                          {new Date(c.date).toLocaleDateString([], { day: 'numeric', month: 'short' })}
+                        </span>
+                      </div>
+                      <p style={{ color: 'var(--text-secondary)', marginTop: '3px', lineHeight: '1.4' }}>{c.text}</p>
+                    </div>
+                  </div>
+                );
+              })}
+              <div ref={commentsEndRef} />
+            </div>
+
+            {/* Поле добавления комментария */}
+            <form 
+              onSubmit={handleSendComment}
+              style={{
+                padding: '12px 20px',
+                borderTop: '1px solid var(--border-color)',
+                display: 'flex',
+                gap: '10px',
+                alignItems: 'center',
+                backgroundColor: 'white'
+              }}
+            >
+              <input 
+                type="text" 
+                placeholder="Добавьте комментарий..." 
+                value={newComment}
+                onChange={(e) => setNewComment(e.target.value)}
+                style={{
+                  flexGrow: 1,
+                  borderRadius: 'var(--border-radius-full)',
+                  border: '1px solid var(--border-color)',
+                  height: '36px',
+                  padding: '0 16px',
+                  fontSize: '13px'
+                }}
+              />
+              <button 
+                type="submit" 
+                disabled={!newComment.trim()}
+                className="gradient-bg"
+                style={{
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '50%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  opacity: !newComment.trim() ? 0.6 : 1
+                }}
+              >
+                <Send size={12} color="white" style={{ transform: 'rotate(-45deg)', margin: '0 0 1px 1px' }} />
+              </button>
+            </form>
+          </div>
+        )}
       </div>
 
-      {/* Стили для бегущей строки (marquee) */}
+      {/* Анимационные стили для выдвижения комментариев */}
       <style>{`
         @keyframes marquee {
           0% { transform: translate3d(0, 0, 0); }
           100% { transform: translate3d(-100%, 0, 0); }
+        }
+        @keyframes slideUp {
+          from { transform: translateY(100%); }
+          to { transform: translateY(0); }
         }
       `}</style>
     </div>
