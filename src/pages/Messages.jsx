@@ -14,6 +14,7 @@ import {
   getDocs
 } from 'firebase/firestore';
 import CallOverlay from '../components/CallOverlay';
+import { useFollowing } from '../context/FollowingContext';
 
 // Начальные демо-диалоги
 const DEMO_CHATS = [
@@ -135,6 +136,10 @@ export default function Messages() {
 
   const [loading, setLoading] = useState(false);
   
+  // Подписки
+  const { isFollowing, toggleFollow } = useFollowing();
+  const isFollowingContact = activeChat ? isFollowing(activeChat.id) : false;
+
   const messagesEndRef = useRef(null);
 
   // Проверка демо-режима
@@ -424,7 +429,25 @@ export default function Messages() {
                     style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }}
                   />
                   <div>
-                    <h3 style={{ fontSize: '15px', fontWeight: 700 }}>{activeChat.name}</h3>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <h3 style={{ fontSize: '15px', fontWeight: 700 }}>{activeChat.name}</h3>
+                      <button
+                        onClick={() => toggleFollow(activeChat.id)}
+                        style={{
+                          background: isFollowingContact ? 'var(--bg-tertiary)' : 'var(--accent-pink)',
+                          border: isFollowingContact ? '1px solid var(--border-color)' : 'none',
+                          color: isFollowingContact ? 'var(--text-primary)' : 'white',
+                          fontSize: '10px',
+                          fontWeight: 700,
+                          padding: '3px 8px',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s'
+                        }}
+                      >
+                        {isFollowingContact ? 'Подписки' : 'Подписаться'}
+                      </button>
+                    </div>
                     <span style={{ fontSize: '11px', color: '#4caf50', fontWeight: 600 }}>Онлайн</span>
                   </div>
                 </div>

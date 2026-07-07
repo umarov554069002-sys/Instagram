@@ -4,16 +4,25 @@ import { Heart, Volume2, VolumeX, ShoppingBag, Music, ChevronUp, ChevronDown, Lo
 import { db } from '../firebase';
 import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { useCart } from '../context/CartContext';
+import { useFollowing } from '../context/FollowingContext';
 import { MOCK_PRODUCTS } from '../mockData';
 import ShareModal from '../components/ShareModal';
 
-// Стартовые демо-рилсы с вертикальными видео (Mixkit)
+// Демо-профили авторов для сопоставления
+const AUTHOR_PROFILES = {
+  'chat-maria': { name: 'maria_style', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=60' },
+  'chat-seller-1': { name: 'anna_sales', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&auto=format&fit=crop&q=60' },
+  'chat-support': { name: 'instastore_official', avatar: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=100&auto=format&fit=crop&q=60' }
+};
+
+// Стартовые демо-рилсы с авторами
 const DEFAULT_REELS = [
   {
     id: 'reel-1',
     videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-girl-in-neon-sign-holding-camera-34280-large.mp4',
     caption: 'Новый взгляд на качественный звук 🎧 Обзор наушников SoundFlow! #sound #neon #style',
     productId: 'prod-3',
+    authorId: 'chat-maria',
     likes: 342,
     liked: false,
     song: 'SoundFlow - Original Audio'
@@ -23,6 +32,7 @@ const DEFAULT_REELS = [
     videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-woman-showing-leather-handbag-40292-large.mp4',
     caption: 'Минималистичный дизайн и натуральная кожа. Идеально под любой образ 👜 #accessories #cream',
     productId: 'prod-2',
+    authorId: 'chat-seller-1',
     likes: 189,
     liked: false,
     song: 'Creamy - Accessories Collection'
@@ -32,6 +42,7 @@ const DEFAULT_REELS = [
     videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-holding-a-smartphone-in-neon-lighting-34302-large.mp4',
     caption: 'Качество в каждой детали. Узнайте характеристики в каталоге! ✨ #electronics #unbox',
     productId: 'prod-3',
+    authorId: 'chat-support',
     likes: 512,
     liked: false,
     song: 'Neon Beats - Gadgets'
@@ -69,6 +80,9 @@ export default function Reels() {
 
   // Состояние модалки репоста
   const [isShareOpen, setIsShareOpen] = useState(false);
+
+  // Контекст подписок
+  const { isFollowing, toggleFollow } = useFollowing();
 
   const videoRef = useRef(null);
   const commentsEndRef = useRef(null);
@@ -229,6 +243,11 @@ export default function Reels() {
 
   const activeReel = reels[currentReelIdx];
   const linkedProduct = MOCK_PRODUCTS.find(p => p.id === activeReel.productId);
+
+  // Определение автора текущего рилса
+  const authorId = activeReel.authorId || 'chat-support';
+  const author = AUTHOR_PROFILES[authorId];
+  const isFollowingAuthor = isFollowing(authorId);
 
   return (
     <div style={{
@@ -487,10 +506,10 @@ export default function Reels() {
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
             <div className="gradient-bg" style={{ width: '28px', height: '28px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1px' }}>
               <div style={{ width: '100%', height: '100%', borderRadius: '50%', backgroundColor: '#000', overflow: 'hidden' }}>
-                <img src={linkedProduct?.image || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=100'} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                <img src={author.avatar} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               </div>
             </div>
-            <span style={{ fontSize: '13px', fontWeight: 700 }}>instastore_official</span>
+            <span style={{ fontSize: '13px', fontWeight: 700, pointerEvents: 'auto' }}>{author.name}</span>
             <span style={{
               fontSize: '10px',
               border: '1px solid rgba(255,255,255,0.4)',
@@ -498,6 +517,26 @@ export default function Reels() {
               padding: '1px 4px',
               fontWeight: 600
             }}>Магазин</span>
+
+            {/* Кнопка подписки */}
+            <button
+              onClick={() => toggleFollow(authorId)}
+              style={{
+                background: isFollowingAuthor ? 'rgba(255,255,255,0.2)' : 'var(--accent-pink)',
+                border: 'none',
+                color: 'white',
+                fontSize: '10px',
+                fontWeight: 700,
+                padding: '3px 10px',
+                borderRadius: '4px',
+                marginLeft: '8px',
+                cursor: 'pointer',
+                transition: 'background-color 0.2s',
+                pointerEvents: 'auto'
+              }}
+            >
+              {isFollowingAuthor ? 'Подписки' : 'Подписаться'}
+            </button>
           </div>
 
           <p style={{
