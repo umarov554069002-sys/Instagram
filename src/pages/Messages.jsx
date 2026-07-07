@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Send, MessageSquare, ShieldAlert, User, Check, Loader2 } from 'lucide-react';
+import { Send, MessageSquare, ShieldAlert, User, Check, Loader2, Phone, Video } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { db } from '../firebase';
 import { 
@@ -13,6 +13,7 @@ import {
   setDoc,
   getDocs
 } from 'firebase/firestore';
+import CallOverlay from '../components/CallOverlay';
 
 // Начальные демо-диалоги
 const DEMO_CHATS = [
@@ -58,6 +59,15 @@ export default function Messages() {
   const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState('');
   const [typing, setTyping] = useState(false);
+  const [activeCall, setActiveCall] = useState(null);
+
+  const handleStartCall = (type) => {
+    if (!activeChat) return;
+    setActiveCall({
+      contact: activeChat,
+      type: type
+    });
+  };
   const [loading, setLoading] = useState(false);
   
   const messagesEndRef = useRef(null);
@@ -327,21 +337,69 @@ export default function Messages() {
                   </div>
                 </div>
 
-                {isDemo && (
-                  <span style={{
-                    backgroundColor: 'rgba(255, 204, 0, 0.1)',
-                    color: '#c49a00',
-                    fontSize: '11px',
-                    fontWeight: 600,
-                    padding: '4px 10px',
-                    borderRadius: 'var(--border-radius-full)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px'
-                  }}>
-                    <ShieldAlert size={12} /> ДЕМО-ЧАТ
-                  </span>
-                )}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                  {isDemo && (
+                    <span style={{
+                      backgroundColor: 'rgba(255, 204, 0, 0.1)',
+                      color: '#c49a00',
+                      fontSize: '11px',
+                      fontWeight: 600,
+                      padding: '4px 10px',
+                      borderRadius: 'var(--border-radius-full)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px'
+                    }}>
+                      <ShieldAlert size={12} /> ДЕМО-ЧАТ
+                    </span>
+                  )}
+
+                  {/* Кнопка аудиозвонка */}
+                  <button 
+                    onClick={() => handleStartCall('audio')}
+                    style={{
+                      width: '36px',
+                      height: '36px',
+                      borderRadius: '50%',
+                      backgroundColor: 'var(--bg-tertiary)',
+                      color: 'var(--text-primary)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      border: 'none',
+                      transition: 'background-color 0.2s',
+                      cursor: 'pointer'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--border-color)'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)'}
+                    title="Аудиозвонок"
+                  >
+                    <Phone size={18} />
+                  </button>
+
+                  {/* Кнопка видеозвонка */}
+                  <button 
+                    onClick={() => handleStartCall('video')}
+                    style={{
+                      width: '36px',
+                      height: '36px',
+                      borderRadius: '50%',
+                      backgroundColor: 'var(--bg-tertiary)',
+                      color: 'var(--text-primary)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      border: 'none',
+                      transition: 'background-color 0.2s',
+                      cursor: 'pointer'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--border-color)'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)'}
+                    title="Видеозвонок"
+                  >
+                    <Video size={18} />
+                  </button>
+                </div>
               </div>
 
               {/* История сообщений */}
@@ -520,6 +578,15 @@ export default function Messages() {
           )}
         </div>
       </div>
+
+      {/* Экран аудио/видео вызовов */}
+      {activeCall && (
+        <CallOverlay 
+          contact={activeCall.contact}
+          type={activeCall.type}
+          onClose={() => setActiveCall(null)}
+        />
+      )}
     </div>
   );
 }
