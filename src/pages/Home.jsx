@@ -4,6 +4,7 @@ import { ArrowRight, Truck, RotateCcw, ShieldCheck, Heart, Film } from 'lucide-r
 import { MOCK_PRODUCTS } from '../mockData';
 import ProductCard from '../components/ProductCard';
 import Stories from '../components/Stories';
+import { useFollowing } from '../context/FollowingContext';
 
 // Обложки по умолчанию для рилсов на случай отсутствия в localStorage
 const FALLBACK_REELS = [
@@ -27,8 +28,37 @@ const FALLBACK_REELS = [
   }
 ];
 
+// Рекомендованные профили для подписок
+const SUGGESTED_PROFILES = [
+  { 
+    id: 'chat-maria', 
+    name: 'maria_style', 
+    desc: 'Мария • Блогер / Обзоры', 
+    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=60' 
+  },
+  { 
+    id: 'chat-seller-1', 
+    name: 'anna_sales', 
+    desc: 'Анна • Консультант магазина', 
+    avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&auto=format&fit=crop&q=60' 
+  },
+  { 
+    id: 'chat-logistic', 
+    name: 'sergey_logistic', 
+    desc: 'Сергей • Служба доставки', 
+    avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&auto=format&fit=crop&q=60' 
+  },
+  { 
+    id: 'chat-sales', 
+    name: 'instastore_sales', 
+    desc: 'Оптовый отдел продаж', 
+    avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&auto=format&fit=crop&q=60' 
+  }
+];
+
 export default function Home() {
   const [reelsList, setReelsList] = useState([]);
+  const { isFollowing, toggleFollow } = useFollowing();
 
   // Загрузка популярных рилсов
   useEffect(() => {
@@ -190,6 +220,77 @@ export default function Home() {
                 <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Товаров: {cat.count}</span>
               </Link>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Раздел Рекомендованные профили (Suggested Accounts) */}
+      <section style={{ padding: '60px 0', borderBottom: '1px solid var(--border-color)', background: 'rgba(255, 255, 255, 0.01)' }}>
+        <div className="container">
+          <div style={{ marginBottom: '32px' }}>
+            <h2 style={{ fontSize: '32px', marginBottom: '8px' }}>Рекомендации для вас</h2>
+            <p style={{ color: 'var(--text-secondary)' }}>Интересные аккаунты, на которые можно подписаться</p>
+          </div>
+
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+            gap: '24px'
+          }}>
+            {SUGGESTED_PROFILES.map((profile) => {
+              const isFollowingProfile = isFollowing(profile.id);
+              return (
+                <div 
+                  key={profile.id}
+                  className="glass animate-fade-in"
+                  style={{
+                    borderRadius: 'var(--border-radius-md)',
+                    padding: '24px',
+                    textAlign: 'center',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    boxShadow: 'var(--shadow-sm)',
+                    transition: 'all 0.2s',
+                    position: 'relative'
+                  }}
+                >
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                    <div style={{
+                      width: '72px',
+                      height: '72px',
+                      borderRadius: '50%',
+                      overflow: 'hidden',
+                      marginBottom: '14px',
+                      border: '2px solid var(--border-color)'
+                    }}>
+                      <img src={profile.avatar} alt={profile.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    </div>
+                    <h3 style={{ fontSize: '15px', fontWeight: 700, marginBottom: '4px' }}>@{profile.name}</h3>
+                    <span style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '16px', display: 'block' }}>
+                      {profile.desc}
+                    </span>
+                  </div>
+
+                  <button
+                    onClick={() => toggleFollow(profile.id)}
+                    className={isFollowingProfile ? "btn btn-secondary" : "btn btn-primary"}
+                    style={{
+                      width: '100%',
+                      padding: '8px 0',
+                      borderRadius: 'var(--border-radius-sm)',
+                      fontSize: '13px',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      border: isFollowingProfile ? '1px solid var(--border-color)' : 'none'
+                    }}
+                  >
+                    {isFollowingProfile ? 'Вы подписаны' : 'Подписаться'}
+                  </button>
+                </div>
+              );
+            })}
           </div>
         </div>
       </section>
