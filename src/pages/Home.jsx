@@ -1,11 +1,45 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, Truck, RotateCcw, ShieldCheck, Heart } from 'lucide-react';
+import { ArrowRight, Truck, RotateCcw, ShieldCheck, Heart, Film } from 'lucide-react';
 import { MOCK_PRODUCTS } from '../mockData';
 import ProductCard from '../components/ProductCard';
 import Stories from '../components/Stories';
 
+// Обложки по умолчанию для рилсов на случай отсутствия в localStorage
+const FALLBACK_REELS = [
+  {
+    id: 'reel-1',
+    coverUrl: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&auto=format&fit=crop&q=80',
+    caption: 'Новый взгляд на качественный звук 🎧 Обзор SoundFlow!',
+    likes: 342
+  },
+  {
+    id: 'reel-2',
+    coverUrl: 'https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=500&auto=format&fit=crop&q=80',
+    caption: 'Минималистичный дизайн и натуральная кожа. Идеально под любой образ 👜',
+    likes: 189
+  },
+  {
+    id: 'reel-3',
+    coverUrl: 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=500&auto=format&fit=crop&q=80',
+    caption: 'Качество в каждой детали. Узнайте характеристики в каталоге! ✨',
+    likes: 512
+  }
+];
+
 export default function Home() {
+  const [reelsList, setReelsList] = useState([]);
+
+  // Загрузка популярных рилсов
+  useEffect(() => {
+    const saved = localStorage.getItem('demo_reels');
+    if (saved) {
+      setReelsList(JSON.parse(saved));
+    } else {
+      setReelsList(FALLBACK_REELS);
+    }
+  }, []);
+
   // Показываем первые 3 товара как рекомендуемые
   const featuredProducts = MOCK_PRODUCTS.slice(0, 3);
 
@@ -78,7 +112,6 @@ export default function Home() {
           </div>
 
           <div style={{ position: 'relative', display: 'flex', justifyContent: 'center' }}>
-            {/* Декоративное размытое пятно */}
             <div style={{
               position: 'absolute',
               width: '300px',
@@ -90,7 +123,6 @@ export default function Home() {
               zIndex: 0
             }}></div>
             
-            {/* Изображение с эффектом Glassmorphism сзади */}
             <div className="glass" style={{
               padding: '16px',
               borderRadius: 'var(--border-radius-lg)',
@@ -115,7 +147,7 @@ export default function Home() {
       </section>
 
       {/* Раздел категорий */}
-      <section style={{ padding: '80px 0 40px' }}>
+      <section style={{ padding: '80px 0 40px', borderBottom: '1px solid var(--border-color)' }}>
         <div className="container">
           <h2 style={{ fontSize: '32px', marginBottom: '40px', textAlign: 'center' }}>
             Популярные категории
@@ -162,8 +194,136 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Раздел Популярные Рилсы (Reels Discovery) */}
+      {reelsList.length > 0 && (
+        <section style={{ padding: '60px 0', borderBottom: '1px solid var(--border-color)' }}>
+          <div className="container">
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'flex-end',
+              marginBottom: '40px'
+            }}>
+              <div>
+                <h2 style={{ fontSize: '32px', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Film className="gradient-text" size={28} /> Популярные Рилсы
+                </h2>
+                <p style={{ color: 'var(--text-secondary)' }}>Смотрите обзоры на товары в видеоформате</p>
+              </div>
+              <Link to="/reels" className="btn-text" style={{ display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 600 }}>
+                Смотреть все <ArrowRight size={16} />
+              </Link>
+            </div>
+
+            {/* Сетка обложек рилсов */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+              gap: '30px'
+            }}>
+              {reelsList.slice(0, 3).map((reel, idx) => (
+                <Link 
+                  key={reel.id} 
+                  to={`/reels?index=${idx}`}
+                  className="glass"
+                  style={{
+                    borderRadius: 'var(--border-radius-md)',
+                    overflow: 'hidden',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    aspectRatio: '3/4',
+                    position: 'relative',
+                    boxShadow: 'var(--shadow-sm)',
+                    transition: 'transform var(--transition-fast)'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.03)'}
+                  onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                >
+                  {/* Обложка */}
+                  <img 
+                    src={reel.coverUrl || 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500'} 
+                    alt="" 
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'cover'
+                    }}
+                  />
+
+                  {/* Оверлей приглушения */}
+                  <div style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
+                    backgroundColor: 'rgba(0,0,0,0.3)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                    padding: '20px',
+                    color: 'white'
+                  }}>
+                    {/* Кнопка Play по центру */}
+                    <div style={{
+                      position: 'absolute',
+                      top: '50%',
+                      left: '50%',
+                      transform: 'translate(-50%, -50%)',
+                      width: '48px',
+                      height: '48px',
+                      borderRadius: '50%',
+                      backgroundColor: 'rgba(255,255,255,0.25)',
+                      backdropFilter: 'blur(4px)',
+                      border: '1px solid rgba(255,255,255,0.4)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.25)'
+                    }}>
+                      <Film size={20} color="white" />
+                    </div>
+
+                    {/* Верхняя строка - Лайки */}
+                    <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                      <span style={{
+                        fontSize: '12px',
+                        fontWeight: 700,
+                        backgroundColor: 'rgba(0,0,0,0.5)',
+                        padding: '4px 10px',
+                        borderRadius: 'var(--border-radius-full)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px'
+                      }}>
+                        ❤️ {reel.likes}
+                      </span>
+                    </div>
+
+                    {/* Нижняя строка - Текст */}
+                    <p style={{
+                      fontSize: '13px',
+                      fontWeight: 600,
+                      lineHeight: '1.4',
+                      textShadow: '0 2px 4px rgba(0,0,0,0.8)',
+                      margin: 0,
+                      display: '-webkit-box',
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: 'vertical',
+                      overflow: 'hidden'
+                    }}>
+                      {reel.caption}
+                    </p>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* Рекомендуемые товары */}
-      <section id="featured" style={{ padding: '60px 0' }}>
+      <section id="featured" style={{ padding: '60px 0', borderBottom: '1px solid var(--border-color)' }}>
         <div className="container">
           <div style={{
             display: 'flex',

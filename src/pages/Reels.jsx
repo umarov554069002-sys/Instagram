@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Heart, Volume2, VolumeX, ShoppingBag, Music, ChevronUp, ChevronDown, Loader2, MessageCircle, X, Send } from 'lucide-react';
 import { db } from '../firebase';
 import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
@@ -15,11 +15,12 @@ const AUTHOR_PROFILES = {
   'chat-support': { name: 'instastore_official', avatar: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=100&auto=format&fit=crop&q=60' }
 };
 
-// Стартовые демо-рилсы с авторами
+// Стартовые демо-рилсы с обложками (coverUrl)
 const DEFAULT_REELS = [
   {
     id: 'reel-1',
     videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-girl-in-neon-sign-holding-camera-34280-large.mp4',
+    coverUrl: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&auto=format&fit=crop&q=80',
     caption: 'Новый взгляд на качественный звук 🎧 Обзор наушников SoundFlow! #sound #neon #style',
     productId: 'prod-3',
     authorId: 'chat-maria',
@@ -30,6 +31,7 @@ const DEFAULT_REELS = [
   {
     id: 'reel-2',
     videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-woman-showing-leather-handbag-40292-large.mp4',
+    coverUrl: 'https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=500&auto=format&fit=crop&q=80',
     caption: 'Минималистичный дизайн и натуральная кожа. Идеально под любой образ 👜 #accessories #cream',
     productId: 'prod-2',
     authorId: 'chat-seller-1',
@@ -40,6 +42,7 @@ const DEFAULT_REELS = [
   {
     id: 'reel-3',
     videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-holding-a-smartphone-in-neon-lighting-34302-large.mp4',
+    coverUrl: 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=500&auto=format&fit=crop&q=80',
     caption: 'Качество в каждой детали. Узнайте характеристики в каталоге! ✨ #electronics #unbox',
     productId: 'prod-3',
     authorId: 'chat-support',
@@ -67,6 +70,7 @@ const SEED_COMMENTS = {
 
 export default function Reels() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [reels, setReels] = useState([]);
   const [currentReelIdx, setCurrentReelIdx] = useState(0);
   const [muted, setMuted] = useState(true);
@@ -120,6 +124,19 @@ export default function Reels() {
       }
     }
   }, [isDemo]);
+
+  // Считываем GET-параметр ?index=N для перехода к выбранному рилсу
+  useEffect(() => {
+    if (reels.length > 0) {
+      const indexParam = searchParams.get('index');
+      if (indexParam !== null) {
+        const parsed = parseInt(indexParam, 10);
+        if (parsed >= 0 && parsed < reels.length) {
+          setCurrentReelIdx(parsed);
+        }
+      }
+    }
+  }, [searchParams, reels]);
 
   // Загрузка комментариев для текущего рилса
   useEffect(() => {
@@ -246,7 +263,7 @@ export default function Reels() {
 
   // Определение автора текущего рилса
   const authorId = activeReel.authorId || 'chat-support';
-  const author = AUTHOR_PROFILES[authorId];
+  const author = AUTHOR_PROFILES[authorId] || AUTHOR_PROFILES['chat-support'];
   const isFollowingAuthor = isFollowing(authorId);
 
   return (
