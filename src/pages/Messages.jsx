@@ -92,6 +92,15 @@ const ALL_ACCOUNTS = [
   }
 ];
 
+// Короткие заметки собеседников по умолчанию
+const NOTES_LOOKUP = {
+  'chat-seller-1': 'На связи 👜',
+  'chat-maria': 'SoundFlow — огонь! 🎧',
+  'chat-buyer-1': 'Ищу подарок 🎁',
+  'chat-logistic': 'Посылки в пути 🚚',
+  'chat-sales': 'Оптовый прайс готов 📈'
+};
+
 export default function Messages() {
   const { currentUser } = useAuth();
   const [activeChat, setActiveChat] = useState(null);
@@ -111,12 +120,34 @@ export default function Messages() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [customNickname, setCustomNickname] = useState('');
 
+  // Заметки (Instagram Notes)
+  const [userNote, setUserNote] = useState(() => localStorage.getItem('demo_user_note') || '');
+  const [isNoteModalOpen, setIsNoteModalOpen] = useState(false);
+  const [noteInput, setNoteInput] = useState('');
+
   const handleStartCall = (type) => {
     if (!activeChat) return;
     setActiveCall({
       contact: activeChat,
       type: type
     });
+  };
+
+  const handleSaveNote = (e) => {
+    e.preventDefault();
+    if (noteInput.trim().length > 60) return;
+    const cleanNote = noteInput.trim();
+    setUserNote(cleanNote);
+    localStorage.setItem('demo_user_note', cleanNote);
+    setIsNoteModalOpen(false);
+    setNoteInput('');
+  };
+
+  const handleDeleteNote = () => {
+    setUserNote('');
+    localStorage.removeItem('demo_user_note');
+    setIsNoteModalOpen(false);
+    setNoteInput('');
   };
 
   const handleAddCustomAccount = (e) => {
@@ -351,6 +382,125 @@ export default function Messages() {
           }}>
             <MessageSquare size={20} className="gradient-text" />
             <h2 style={{ fontSize: '18px', fontWeight: 700 }}>Сообщения (Direct)</h2>
+          </div>
+
+          {/* Лента заметок (Instagram Notes) */}
+          <div 
+            className="hide-scrollbar"
+            style={{
+              display: 'flex',
+              gap: '16px',
+              padding: '0 24px 16px',
+              overflowX: 'auto',
+              borderBottom: '1px solid var(--border-color)',
+              marginBottom: '16px'
+            }}
+          >
+            {/* Ваша заметка */}
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative', flexShrink: 0 }}>
+              <button 
+                onClick={() => {
+                  setNoteInput(userNote);
+                  setIsNoteModalOpen(true);
+                }}
+                style={{
+                  position: 'relative',
+                  width: '52px',
+                  height: '52px',
+                  borderRadius: '50%',
+                  backgroundColor: 'var(--bg-tertiary)',
+                  border: '2px solid var(--border-color)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: 0,
+                  cursor: 'pointer'
+                }}
+              >
+                <img 
+                  src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=60" 
+                  alt="" 
+                  style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} 
+                />
+                
+                {/* Облачко с заметкой */}
+                <div style={{
+                  position: 'absolute',
+                  top: '-10px',
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  backgroundColor: 'var(--bg-primary)',
+                  border: '1px solid var(--border-color)',
+                  borderRadius: '12px',
+                  padding: '4px 8px',
+                  fontSize: '9px',
+                  fontWeight: 600,
+                  whiteSpace: 'nowrap',
+                  maxWidth: '70px',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  boxShadow: 'var(--shadow-sm)',
+                  color: 'var(--text-primary)'
+                }}>
+                  {userNote ? userNote : '+'}
+                </div>
+              </button>
+              <span style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '6px', textAlign: 'center', width: '56px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                Вы
+              </span>
+            </div>
+
+            {/* Заметки контактов */}
+            {chatsList.map(chat => {
+              const noteText = NOTES_LOOKUP[chat.id];
+              if (!noteText) return null;
+              return (
+                <div 
+                  key={`note-${chat.id}`}
+                  onClick={() => handleSelectAccount(chat)}
+                  style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative', flexShrink: 0, cursor: 'pointer' }}
+                >
+                  <div style={{
+                    position: 'relative',
+                    width: '52px',
+                    height: '52px',
+                    borderRadius: '50%',
+                    border: '2px solid var(--border-color)',
+                    overflow: 'hidden'
+                  }}>
+                    <img src={chat.avatar} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  </div>
+                  
+                  {/* Облачко с заметкой */}
+                  <div style={{
+                    position: 'absolute',
+                    top: '-10px',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    backgroundColor: 'var(--bg-primary)',
+                    border: '1px solid var(--border-color)',
+                    borderRadius: '12px',
+                    padding: '4px 8px',
+                    fontSize: '9px',
+                    fontWeight: 500,
+                    maxWidth: '70px',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                    boxShadow: 'var(--shadow-sm)',
+                    color: 'var(--text-secondary)'
+                  }}
+                  title={noteText}
+                  >
+                    {noteText}
+                  </div>
+                  
+                  <span style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '6px', textAlign: 'center', width: '56px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {chat.name.split(' ')[0]}
+                  </span>
+                </div>
+              );
+            })}
           </div>
 
           {/* Строка поиска и кнопка добавления аккаунта */}
@@ -836,6 +986,92 @@ export default function Messages() {
               >
                 Начать чат
               </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Модальное окно создания/редактирования заметки (Instagram Notes) */}
+      {isNoteModalOpen && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100vw',
+          height: '100vh',
+          backgroundColor: 'rgba(0, 0, 0, 0.6)',
+          backdropFilter: 'blur(4px)',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          zIndex: 12000,
+          animation: 'fadeIn 0.2s'
+        }}
+        onClick={() => setIsNoteModalOpen(false)}
+        >
+          <div className="glass" style={{
+            width: '100%',
+            maxWidth: '340px',
+            borderRadius: 'var(--border-radius-md)',
+            padding: '24px',
+            boxShadow: 'var(--shadow-lg)',
+            animation: 'scaleUp 0.3s cubic-bezier(0.1, 1, 0.1, 1) forwards'
+          }}
+          onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h3 style={{ fontSize: '16px', fontWeight: 700 }}>{userNote ? 'Ваша заметка' : 'Поделиться мыслью'}</h3>
+              <button onClick={() => setIsNoteModalOpen(false)} style={{ color: 'var(--text-secondary)' }}>
+                <X size={18} />
+              </button>
+            </div>
+            
+            <form onSubmit={handleSaveNote} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                  Мысль (до 60 символов)
+                </label>
+                <textarea
+                  placeholder="Что у вас нового?..."
+                  required
+                  maxLength={60}
+                  value={noteInput}
+                  onChange={(e) => setNoteInput(e.target.value)}
+                  autoFocus
+                  rows={3}
+                  style={{
+                    width: '100%',
+                    borderRadius: 'var(--border-radius-sm)',
+                    border: '1px solid var(--border-color)',
+                    padding: '8px 12px',
+                    fontSize: '13px',
+                    resize: 'none'
+                  }}
+                />
+                <span style={{ fontSize: '10px', textAlign: 'right', color: noteInput.length > 50 ? 'var(--accent-pink)' : 'var(--text-tertiary)' }}>
+                  {noteInput.length}/60
+                </span>
+              </div>
+              
+              <div style={{ display: 'flex', gap: '10px', marginTop: '6px' }}>
+                {userNote && (
+                  <button
+                    type="button"
+                    onClick={handleDeleteNote}
+                    className="btn btn-secondary"
+                    style={{ flex: 1, height: '38px', borderRadius: 'var(--border-radius-sm)', border: '1px solid #ff3b30', color: '#ff3b30' }}
+                  >
+                    Удалить
+                  </button>
+                )}
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  style={{ flex: 2, height: '38px', borderRadius: 'var(--border-radius-sm)' }}
+                >
+                  Поделиться
+                </button>
+              </div>
             </form>
           </div>
         </div>
