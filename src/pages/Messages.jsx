@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Send, MessageSquare, ShieldAlert, User, Check, Loader2, Phone, Video, Search } from 'lucide-react';
+import { Send, MessageSquare, ShieldAlert, User, Check, Loader2, Phone, Video, Search, UserPlus, X } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { db } from '../firebase';
 import { 
@@ -107,12 +107,58 @@ export default function Messages() {
     return saved ? JSON.parse(saved) : DEMO_CHATS;
   });
 
+  // Добавление кастомного аккаунта
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [customNickname, setCustomNickname] = useState('');
+
   const handleStartCall = (type) => {
     if (!activeChat) return;
     setActiveCall({
       contact: activeChat,
       type: type
     });
+  };
+
+  const handleAddCustomAccount = (e) => {
+    e.preventDefault();
+    if (!customNickname.trim()) return;
+
+    let nickname = customNickname.trim().replace(/^@/, '').replace(/\s+/g, '');
+    if (!nickname) return;
+
+    const existingInAll = ALL_ACCOUNTS.find(
+      acc => acc.name.toLowerCase().includes(nickname.toLowerCase()) || 
+             acc.id.toLowerCase().includes(nickname.toLowerCase())
+    );
+    
+    if (existingInAll) {
+      handleSelectAccount(existingInAll);
+      setIsAddModalOpen(false);
+      setCustomNickname('');
+      return;
+    }
+
+    const newContact = {
+      id: 'chat-custom-' + Date.now(),
+      name: `@${nickname} 👤`,
+      avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=60',
+      subtitle: 'Онлайн',
+      botAnswers: [
+        `Привет! Я новый пользователь @${nickname}. Рад общению!`,
+        'Я сейчас немного занят покупками в InstaStore, отвечу позже!',
+        'Качество товаров здесь действительно отличное 👍'
+      ]
+    };
+
+    ALL_ACCOUNTS.push(newContact);
+
+    const updatedChatsList = [...chatsList, newContact];
+    setChatsList(updatedChatsList);
+    localStorage.setItem('demo_chats_list', JSON.stringify(updatedChatsList));
+
+    setActiveChat(newContact);
+    setIsAddModalOpen(false);
+    setCustomNickname('');
   };
 
   const handleSelectAccount = (account) => {
@@ -307,26 +353,51 @@ export default function Messages() {
             <h2 style={{ fontSize: '18px', fontWeight: 700 }}>Сообщения (Direct)</h2>
           </div>
 
-          {/* Строка поиска аккаунтов */}
-          <div style={{ padding: '0 24px 16px', position: 'relative' }}>
-            <input
-              type="text"
-              placeholder="Поиск аккаунтов..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+          {/* Строка поиска и кнопка добавления аккаунта */}
+          <div style={{ padding: '0 24px 16px', display: 'flex', gap: '10px', position: 'relative' }}>
+            <div style={{ position: 'relative', flexGrow: 1 }}>
+              <input
+                type="text"
+                placeholder="Поиск аккаунтов..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                style={{
+                  width: '100%',
+                  borderRadius: 'var(--border-radius-full)',
+                  border: '1px solid var(--border-color)',
+                  height: '36px',
+                  padding: '0 16px 0 38px',
+                  fontSize: '13px',
+                  backgroundColor: 'var(--bg-primary)',
+                  color: 'var(--text-primary)',
+                  outline: 'none'
+                }}
+              />
+              <Search size={14} style={{ position: 'absolute', left: '14px', top: '11px', color: 'var(--text-tertiary)' }} />
+            </div>
+
+            <button
+              onClick={() => setIsAddModalOpen(true)}
               style={{
-                width: '100%',
-                borderRadius: 'var(--border-radius-full)',
-                border: '1px solid var(--border-color)',
+                width: '36px',
                 height: '36px',
-                padding: '0 16px 0 38px',
-                fontSize: '13px',
-                backgroundColor: 'var(--bg-primary)',
+                borderRadius: '50%',
+                backgroundColor: 'var(--bg-tertiary)',
                 color: 'var(--text-primary)',
-                outline: 'none'
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                border: 'none',
+                cursor: 'pointer',
+                transition: 'background-color 0.2s',
+                flexShrink: 0
               }}
-            />
-            <Search size={14} style={{ position: 'absolute', left: '38px', top: '11px', color: 'var(--text-tertiary)' }} />
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--border-color)'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)'}
+              title="Начать чат по никнейму"
+            >
+              <UserPlus size={16} />
+            </button>
           </div>
 
           {/* Список контактов */}
@@ -701,6 +772,73 @@ export default function Messages() {
           type={activeCall.type}
           onClose={() => setActiveCall(null)}
         />
+      )}
+
+      {/* Модальное окно добавления аккаунта */}
+      {isAddModalOpen && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100vw',
+          height: '100vh',
+          backgroundColor: 'rgba(0, 0, 0, 0.6)',
+          backdropFilter: 'blur(4px)',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          zIndex: 12000,
+          animation: 'fadeIn 0.2s'
+        }}
+        onClick={() => setIsAddModalOpen(false)}
+        >
+          <div className="glass" style={{
+            width: '100%',
+            maxWidth: '340px',
+            borderRadius: 'var(--border-radius-md)',
+            padding: '24px',
+            boxShadow: 'var(--shadow-lg)',
+            animation: 'scaleUp 0.3s cubic-bezier(0.1, 1, 0.1, 1) forwards'
+          }}
+          onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h3 style={{ fontSize: '16px', fontWeight: 700 }}>Новый диалог</h3>
+              <button onClick={() => setIsAddModalOpen(false)} style={{ color: 'var(--text-secondary)' }}>
+                <X size={18} />
+              </button>
+            </div>
+            
+            <form onSubmit={handleAddCustomAccount} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-secondary)' }}>Никнейм пользователя</label>
+                <input
+                  type="text"
+                  placeholder="@username"
+                  required
+                  value={customNickname}
+                  onChange={(e) => setCustomNickname(e.target.value)}
+                  autoFocus
+                  style={{
+                    width: '100%',
+                    height: '38px',
+                    borderRadius: 'var(--border-radius-sm)',
+                    border: '1px solid var(--border-color)',
+                    padding: '0 12px',
+                    fontSize: '13px'
+                  }}
+                />
+              </div>
+              <button
+                type="submit"
+                className="btn btn-primary"
+                style={{ width: '100%', height: '38px', borderRadius: 'var(--border-radius-sm)', marginTop: '6px' }}
+              >
+                Начать чат
+              </button>
+            </form>
+          </div>
+        </div>
       )}
     </div>
   );
