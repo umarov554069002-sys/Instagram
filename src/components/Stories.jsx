@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { X, ChevronLeft, ChevronRight, ShoppingCart, Plus, Edit3, Image, Sparkles } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, ShoppingCart, Plus, Edit3, Image, Sparkles, Eye } from 'lucide-react';
 import { db } from '../firebase';
 import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { useAuth } from '../context/AuthContext';
@@ -72,6 +72,9 @@ export default function Stories() {
   const [creatorColor, setCreatorColor] = useState('#ffffff');
   const [creatorEffect, setCreatorEffect] = useState('none');
 
+  // Состояние просмотра списка зрителей
+  const [showViewersList, setShowViewersList] = useState(false);
+
   const progressInterval = useRef(null);
   const STORY_DURATION = 5000; // 5 секунд на историю
   const isDemo = !db;
@@ -135,6 +138,7 @@ export default function Stories() {
     setActiveStoryIndex(index);
     setProgress(0);
     setIsPaused(false);
+    setShowViewersList(false);
 
     // Отмечаем историю как просмотренную
     setStories(prev => {
@@ -147,11 +151,13 @@ export default function Stories() {
   const handleCloseStory = () => {
     setActiveStoryIndex(null);
     setProgress(0);
+    setShowViewersList(false);
     if (progressInterval.current) clearInterval(progressInterval.current);
   };
 
   const handleNextStory = () => {
     setProgress(0);
+    setShowViewersList(false);
     setActiveStoryIndex((prev) => {
       if (prev === null) return null;
       if (prev < stories.length - 1) {
@@ -165,6 +171,7 @@ export default function Stories() {
 
   const handlePrevStory = () => {
     setProgress(0);
+    setShowViewersList(false);
     setActiveStoryIndex((prev) => {
       if (prev === null) return null;
       if (prev > 0) {
@@ -346,9 +353,9 @@ export default function Stories() {
               boxShadow: 'var(--shadow-lg)'
             }}
             onMouseDown={() => setIsPaused(true)}
-            onMouseUp={() => setIsPaused(false)}
+            onMouseUp={() => { if (!showViewersList) setIsPaused(false); }}
             onTouchStart={() => setIsPaused(true)}
-            onTouchEnd={() => setIsPaused(false)}
+            onTouchEnd={() => { if (!showViewersList) setIsPaused(false); }}
           >
             {/* Картинка истории с наложенным CSS-фильтром */}
             <img 
@@ -376,6 +383,8 @@ export default function Stories() {
                 fontWeight: 900,
                 textAlign: 'center',
                 padding: '0 20px',
+                width: '100%',
+                wordWrap: 'break-word',
                 textShadow: '0 2px 10px rgba(0,0,0,0.85)',
                 zIndex: 12,
                 pointerEvents: 'none',
@@ -468,7 +477,7 @@ export default function Stories() {
               </div>
 
               {/* Заголовок истории и Закрыть */}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContainer: 'space-between', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                   <div className="gradient-bg" style={{ width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.5px' }}>
                     <img src={stories[activeStoryIndex].image} alt="" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
@@ -485,6 +494,41 @@ export default function Stories() {
                 </button>
               </div>
             </div>
+
+            {/* Блок просмотра счетчика зрителей (Только для "Ваша история") */}
+            {stories[activeStoryIndex].title === 'Ваша история' && !showViewersList && (
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsPaused(true);
+                  setShowViewersList(true);
+                }}
+                style={{
+                  position: 'absolute',
+                  bottom: '24px',
+                  left: '20px',
+                  color: 'white',
+                  backgroundColor: 'rgba(0,0,0,0.6)',
+                  backdropFilter: 'blur(8px)',
+                  border: '1px solid rgba(255,255,255,0.2)',
+                  borderRadius: 'var(--border-radius-full)',
+                  padding: '8px 16px',
+                  fontSize: '12px',
+                  fontWeight: 700,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  zIndex: 15,
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.25)',
+                  transition: 'background-color 0.2s'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.8)'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.6)'}
+              >
+                <Eye size={14} /> Просмотры: 3
+              </button>
+            )}
 
             {/* Кнопка "Купить" внизу */}
             {stories[activeStoryIndex].productId && (
@@ -514,6 +558,107 @@ export default function Stories() {
                 >
                   <ShoppingCart size={16} /> В магазин
                 </button>
+              </div>
+            )}
+
+            {/* Выдвижная шторка со списком зрителей (Stories Viewers Drawer) */}
+            {showViewersList && (
+              <div style={{
+                position: 'absolute',
+                bottom: 0,
+                left: 0,
+                width: '100%',
+                backgroundColor: 'var(--bg-secondary)',
+                borderRadius: 'var(--border-radius-lg) var(--border-radius-lg) 0 0',
+                padding: '24px',
+                color: 'var(--text-primary)',
+                zIndex: 30,
+                boxShadow: '0 -8px 30px rgba(0,0,0,0.5)',
+                maxHeight: '380px',
+                overflowY: 'auto',
+                borderTop: '1px solid var(--border-color)',
+                animation: 'slideUp 0.3s cubic-bezier(0.1, 1, 0.1, 1) forwards'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: '1px solid var(--border-color)', paddingBottom: '10px' }}>
+                  <h4 style={{ fontSize: '15px', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '6px', margin: 0 }}>
+                    <Eye size={16} /> Просмотрели историю (3)
+                  </h4>
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowViewersList(false);
+                      setIsPaused(false);
+                    }}
+                    style={{ color: 'var(--text-secondary)', background: 'none', border: 'none', cursor: 'pointer' }}
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  {/* Зритель 1 */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=60" alt="" style={{ width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover' }} />
+                      <div>
+                        <span style={{ fontSize: '13px', fontWeight: 700, display: 'block' }}>@maria_style</span>
+                        <span style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>Мария • Блогер</span>
+                      </div>
+                    </div>
+                    <button 
+                      onClick={() => {
+                        handleCloseStory();
+                        navigate('/messages', { state: { selectChatId: 'chat-maria' } });
+                      }}
+                      className="btn btn-secondary" 
+                      style={{ padding: '6px 12px', fontSize: '11px', borderRadius: 'var(--border-radius-sm)', border: '1px solid var(--border-color)', cursor: 'pointer' }}
+                    >
+                      Написать
+                    </button>
+                  </div>
+
+                  {/* Зритель 2 */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&auto=format&fit=crop&q=60" alt="" style={{ width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover' }} />
+                      <div>
+                        <span style={{ fontSize: '13px', fontWeight: 700, display: 'block' }}>@anna_sales</span>
+                        <span style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>Анна • Продавец</span>
+                      </div>
+                    </div>
+                    <button 
+                      onClick={() => {
+                        handleCloseStory();
+                        navigate('/messages', { state: { selectChatId: 'chat-seller-1' } });
+                      }}
+                      className="btn btn-secondary" 
+                      style={{ padding: '6px 12px', fontSize: '11px', borderRadius: 'var(--border-radius-sm)', border: '1px solid var(--border-color)', cursor: 'pointer' }}
+                    >
+                      Написать
+                    </button>
+                  </div>
+
+                  {/* Зритель 3 */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <img src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&auto=format&fit=crop&q=60" alt="" style={{ width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover' }} />
+                      <div>
+                        <span style={{ fontSize: '13px', fontWeight: 700, display: 'block' }}>@sergey_logistic</span>
+                        <span style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>Сергей • Доставка</span>
+                      </div>
+                    </div>
+                    <button 
+                      onClick={() => {
+                        handleCloseStory();
+                        navigate('/messages', { state: { selectChatId: 'chat-logistic' } });
+                      }}
+                      className="btn btn-secondary" 
+                      style={{ padding: '6px 12px', fontSize: '11px', borderRadius: 'var(--border-radius-sm)', border: '1px solid var(--border-color)', cursor: 'pointer' }}
+                    >
+                      Написать
+                    </button>
+                  </div>
+                </div>
               </div>
             )}
           </div>

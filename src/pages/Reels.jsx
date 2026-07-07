@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Heart, Volume2, VolumeX, ShoppingBag, Music, ChevronUp, ChevronDown, Loader2, MessageCircle, X, Send } from 'lucide-react';
+import { Heart, Volume2, VolumeX, ShoppingBag, Music, ChevronUp, ChevronDown, Loader2, MessageCircle, X, Send, Eye } from 'lucide-react';
 import { db } from '../firebase';
 import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { useCart } from '../context/CartContext';
@@ -25,6 +25,7 @@ const DEFAULT_REELS = [
     productId: 'prod-3',
     authorId: 'chat-maria',
     likes: 342,
+    views: 1240,
     liked: false,
     song: 'SoundFlow - Original Audio'
   },
@@ -36,6 +37,7 @@ const DEFAULT_REELS = [
     productId: 'prod-2',
     authorId: 'chat-seller-1',
     likes: 189,
+    views: 890,
     liked: false,
     song: 'Creamy - Accessories Collection'
   },
@@ -47,6 +49,7 @@ const DEFAULT_REELS = [
     productId: 'prod-3',
     authorId: 'chat-support',
     likes: 512,
+    views: 2450,
     liked: false,
     song: 'Neon Beats - Gadgets'
   }
@@ -413,6 +416,27 @@ export default function Reels() {
             </button>
             <span style={{ color: 'white', fontSize: '11px', fontWeight: 600, marginTop: '5px', textShadow: '0 2px 4px rgba(0,0,0,0.8)' }}>
               {activeReel.likes}
+            </span>
+          </div>
+
+          {/* Просмотры Reels */}
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            <div style={{
+              width: '46px',
+              height: '46px',
+              borderRadius: '50%',
+              backgroundColor: 'rgba(0,0,0,0.6)',
+              backdropFilter: 'blur(4px)',
+              border: '1px solid rgba(255,255,255,0.15)',
+              color: 'white',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}>
+              <Eye size={20} />
+            </div>
+            <span style={{ color: 'white', fontSize: '11px', fontWeight: 600, marginTop: '5px', textShadow: '0 2px 4px rgba(0,0,0,0.8)' }}>
+              {activeReel.views || 1200}
             </span>
           </div>
 
