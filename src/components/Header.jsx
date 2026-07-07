@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ShoppingBag, User, Sun, Moon, LogOut, Package2, Shield, Send, Film, Heart } from 'lucide-react';
+import { ShoppingBag, User, Sun, Moon, LogOut, Package2, Shield, Send, Film, Heart, Search } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { useFavorites } from '../context/FavoritesContext';
@@ -126,6 +126,25 @@ export default function Header() {
           title="Рилсы (Reels)"
         >
           <Film size={18} />
+        </Link>
+
+        {/* Глобальный поиск (Explore) */}
+        <Link 
+          to="/explore" 
+          style={{
+            position: 'relative',
+            width: '40px',
+            height: '40px',
+            borderRadius: '50%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: 'var(--bg-tertiary)',
+            color: 'var(--text-primary)'
+          }}
+          title="Поиск и исследования"
+        >
+          <Search size={18} />
         </Link>
 
         {/* Сообщения (Direct) */}

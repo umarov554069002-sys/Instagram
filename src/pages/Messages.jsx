@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Send, MessageSquare, ShieldAlert, User, Check, Loader2, Phone, Video, Search, UserPlus, X } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { db } from '../firebase';
@@ -218,6 +219,19 @@ export default function Messages() {
   const isFollowingContact = activeChat ? isFollowing(activeChat.id) : false;
 
   const messagesEndRef = useRef(null);
+
+  const location = useLocation();
+
+  // Автовыбор диалога при переходе по ссылке (например, со страницы поиска)
+  useEffect(() => {
+    if (location.state?.selectChatId) {
+      const targetId = location.state.selectChatId;
+      const target = ALL_ACCOUNTS.find(acc => acc.id === targetId);
+      if (target) {
+        handleSelectAccount(target);
+      }
+    }
+  }, [location, chatsList]);
 
   // Проверка демо-режима
   const isDemo = !db;
