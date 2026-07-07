@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Send, MessageSquare, ShieldAlert, User, Check, Loader2, Phone, Video } from 'lucide-react';
+import { Send, MessageSquare, ShieldAlert, User, Check, Loader2, Phone, Video, Search } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { db } from '../firebase';
 import { 
@@ -53,6 +53,44 @@ const DEMO_CHATS = [
   }
 ];
 
+// Расширенная база всех аккаунтов магазина для поиска
+const ALL_ACCOUNTS = [
+  ...DEMO_CHATS,
+  {
+    id: 'chat-logistic',
+    name: 'Сергей (Служба доставки/Логистика) 🚚',
+    avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&auto=format&fit=crop&q=60',
+    subtitle: 'В сети',
+    botAnswers: [
+      'Здравствуйте! Ваш заказ передан курьеру.',
+      'Ожидайте доставку сегодня с 14:00 до 18:00.',
+      'Номер накладной вы можете уточнить в личном кабинете.',
+    ]
+  },
+  {
+    id: 'chat-sales',
+    name: 'PR-отдел & Оптовые продажи 📈',
+    avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&auto=format&fit=crop&q=60',
+    subtitle: 'Были в сети 2 часа назад',
+    botAnswers: [
+      'Приветствуем! Оптовые прайсы и каталоги отправлены вам на почту.',
+      'При заказе от 50 000 ₽ предоставляем бесплатную доставку.',
+      'Опишите ваше предложение по сотрудничеству, мы свяжемся с вами.',
+    ]
+  },
+  {
+    id: 'chat-maria',
+    name: 'Мария (Influencer / PR) ✨',
+    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=60',
+    subtitle: 'Онлайн',
+    botAnswers: [
+      'Привет! Очень крутые товары у вас в магазине!',
+      'Хочу сделать обзор на ваш свитшот в сторис.',
+      'Мой менеджер свяжется с вами для уточнения деталей интеграции!',
+    ]
+  }
+];
+
 export default function Messages() {
   const { currentUser } = useAuth();
   const [activeChat, setActiveChat] = useState(null);
@@ -69,6 +107,29 @@ export default function Messages() {
     });
   };
   const [loading, setLoading] = useState(false);
+  
+  // Состояние диалогов и поиска аккаунтов
+  const [chatsList, setChatsList] = useState(() => {
+    const saved = localStorage.getItem('demo_chats_list');
+    return saved ? JSON.parse(saved) : DEMO_CHATS;
+  });
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Выбор диалога из списка
+  const handleSelectChat = (chat) => {
+    if (!chatsList.some(c => c.id === chat.id)) {
+      const updated = [...chatsList, chat];
+      setChatsList(updated);
+      localStorage.setItem('demo_chats_list', JSON.stringify(updated));
+    }
+    setActiveChat(chat);
+    setSearchQuery('');
+  };
+
+  // Список отфильтрованных контактов
+  const filteredChats = searchQuery.trim() !== ''
+    ? ALL_ACCOUNTS.filter(acc => acc.name.toLowerCase().includes(searchQuery.toLowerCase()))
+    : chatsList;
   
   const messagesEndRef = useRef(null);
 
@@ -238,73 +299,119 @@ export default function Messages() {
             <h2 style={{ fontSize: '18px', fontWeight: 700 }}>Сообщения (Direct)</h2>
           </div>
 
+          {/* Поиск аккаунтов */}
+          <div style={{ padding: '0 24px 16px', borderBottom: '1px solid var(--border-color)' }}>
+            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+              <input 
+                type="text" 
+                placeholder="Поиск аккаунтов..." 
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                style={{
+                  width: '100%',
+                  height: '36px',
+                  borderRadius: 'var(--border-radius-full)',
+                  border: '1px solid var(--border-color)',
+                  padding: '0 16px 0 36px',
+                  fontSize: '13px',
+                  backgroundColor: 'var(--bg-primary)',
+                  color: 'var(--text-primary)'
+                }}
+              />
+              <Search size={14} style={{ position: 'absolute', left: '14px', color: 'var(--text-tertiary)' }} />
+              {searchQuery && (
+                <button 
+                  onClick={() => setSearchQuery('')}
+                  style={{
+                    position: 'absolute',
+                    right: '14px',
+                    color: 'var(--accent-pink)',
+                    fontSize: '11px',
+                    fontWeight: 600,
+                    border: 'none',
+                    background: 'none',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Сброс
+                </button>
+              )}
+            </div>
+          </div>
+
           {/* Список контактов */}
           <div style={{ flexGrow: 1, overflowY: 'auto' }}>
-            {DEMO_CHATS.map((chat) => {
-              const isSelected = activeChat?.id === chat.id;
-              return (
-                <button
-                  key={chat.id}
-                  onClick={() => setActiveChat(chat)}
-                  style={{
-                    width: '100%',
-                    padding: '16px 20px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '12px',
-                    textAlign: 'left',
-                    backgroundColor: isSelected ? 'rgba(225, 48, 108, 0.08)' : 'transparent',
-                    borderBottom: '1px solid var(--border-color)',
-                    transition: 'background-color 0.2s',
-                  }}
-                  onMouseEnter={(e) => !isSelected && (e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)')}
-                  onMouseLeave={(e) => !isSelected && (e.currentTarget.style.backgroundColor = 'transparent')}
-                >
-                  {/* Аватар */}
-                  <div style={{ position: 'relative' }}>
-                    <img 
-                      src={chat.avatar} 
-                      alt={chat.name} 
-                      style={{
-                        width: '48px',
-                        height: '48px',
+            {filteredChats.length > 0 ? (
+              filteredChats.map((chat) => {
+                const isSelected = activeChat?.id === chat.id;
+                return (
+                  <button
+                    key={chat.id}
+                    onClick={() => handleSelectChat(chat)}
+                    style={{
+                      width: '100%',
+                      padding: '16px 20px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px',
+                      textAlign: 'left',
+                      backgroundColor: isSelected ? 'rgba(225, 48, 108, 0.08)' : 'transparent',
+                      borderBottom: '1px solid var(--border-color)',
+                      transition: 'background-color 0.2s',
+                    }}
+                    onMouseEnter={(e) => !isSelected && (e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)')}
+                    onMouseLeave={(e) => !isSelected && (e.currentTarget.style.backgroundColor = 'transparent')}
+                  >
+                    {/* Аватар */}
+                    <div style={{ position: 'relative' }}>
+                      <img 
+                        src={chat.avatar} 
+                        alt={chat.name} 
+                        style={{
+                          width: '48px',
+                          height: '48px',
+                          borderRadius: '50%',
+                          objectFit: 'cover',
+                          border: '2px solid var(--border-color)'
+                        }}
+                      />
+                      <div style={{
+                        position: 'absolute',
+                        bottom: '2px',
+                        right: '2px',
+                        width: '12px',
+                        height: '12px',
                         borderRadius: '50%',
-                        objectFit: 'cover',
-                        border: '2px solid var(--border-color)'
-                      }}
-                    />
-                    <div style={{
-                      position: 'absolute',
-                      bottom: '2px',
-                      right: '2px',
-                      width: '12px',
-                      height: '12px',
-                      borderRadius: '50%',
-                      backgroundColor: '#4caf50',
-                      border: '2px solid var(--bg-secondary)'
-                    }}></div>
-                  </div>
+                        backgroundColor: '#4caf50',
+                        border: '2px solid var(--bg-secondary)'
+                      }}></div>
+                    </div>
 
-                  {/* Описание контакта */}
-                  <div style={{ flexGrow: 1, minWidth: 0 }}>
-                    <h4 style={{
-                      fontSize: '14px',
-                      fontWeight: 600,
-                      color: 'var(--text-primary)',
-                      marginBottom: '4px',
-                      whiteSpace: 'nowrap',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis'
-                    }}>
-                      {chat.name}
-                    </h4>
-                    <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-                      {chat.subtitle}
-                    </span>
-                  </div>
-                </button>
-              );
-            })}
+                    {/* Описание контакта */}
+                    <div style={{ flexGrow: 1, minWidth: 0 }}>
+                      <h4 style={{
+                        fontSize: '14px',
+                        fontWeight: 600,
+                        color: 'var(--text-primary)',
+                        marginBottom: '4px',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis'
+                      }}>
+                        {chat.name}
+                      </h4>
+                      <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                        {chat.subtitle}
+                      </span>
+                    </div>
+                  </button>
+                );
+              })
+            ) : (
+              <div style={{ padding: '32px 24px', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '13px' }}>
+                Аккаунты не найдены
+              </div>
+            )}
           </div>
         </div>
 
