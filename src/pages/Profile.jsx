@@ -71,7 +71,7 @@ export default function Profile() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { currentUser } = useAuth();
-  const { isFollowing, toggleFollow, followingList } = useFollowing();
+  const { isFollowing, toggleFollow, followedIds } = useFollowing();
   const [activeTab, setActiveTab] = useState('posts'); // posts, reels, saved
   const [hoveredPostId, setHoveredPostId] = useState(null);
 
@@ -86,7 +86,7 @@ export default function Profile() {
         avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=60',
         bio: 'Пользователь Instagram 📸. Обожаю стильные фотографии и качественный звук.',
         baseFollowers: 298000000000, // 298 млрд
-        following: followingList.length,
+        following: followedIds.length,
         reels: [],
         verified: true
       }
