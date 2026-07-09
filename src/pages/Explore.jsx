@@ -104,18 +104,24 @@ export default function Explore() {
     if (saved) {
       try {
         const customContacts = JSON.parse(saved);
-        const uniqueMap = {};
-        [...BASE_ACCOUNTS, ...customContacts].forEach(acc => {
-          uniqueMap[acc.id] = {
-            id: acc.id,
-            name: acc.name,
-            fullName: acc.fullName || acc.name,
-            avatar: acc.avatar,
-            desc: acc.desc || acc.subtitle || 'Пользователь'
-          };
-        });
-        setAllAccounts(Object.values(uniqueMap));
-      } catch (e) {}
+        if (Array.isArray(customContacts)) {
+          const uniqueMap = {};
+          [...BASE_ACCOUNTS, ...customContacts].forEach(acc => {
+            if (acc && acc.id) {
+              uniqueMap[acc.id] = {
+                id: acc.id,
+                name: acc.name || 'user',
+                fullName: acc.fullName || acc.name || 'User',
+                avatar: acc.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100',
+                desc: acc.desc || acc.subtitle || 'Пользователь'
+              };
+            }
+          });
+          setAllAccounts(Object.values(uniqueMap));
+        }
+      } catch (e) {
+        console.error("Ошибка загрузки контактов в Explore:", e);
+      }
     }
   }, []);
 
@@ -125,17 +131,21 @@ export default function Explore() {
 
   const query = searchQuery.trim().toLowerCase();
   
-  // Фильтрация аккаунтов
-  const filteredAccounts = allAccounts.filter(acc => 
-    acc.name.toLowerCase().includes(query) || 
-    acc.fullName.toLowerCase().includes(query)
-  );
+  // Фильтрация аккаунтов (защищено от undefined)
+  const filteredAccounts = allAccounts.filter(acc => {
+    if (!acc) return false;
+    const name = acc.name || '';
+    const fullName = acc.fullName || '';
+    return name.toLowerCase().includes(query) || fullName.toLowerCase().includes(query);
+  });
 
-  // Фильтрация публикаций (по описанию или автору)
-  const filteredPosts = posts.filter(post => 
-    (post.caption && post.caption.toLowerCase().includes(query)) ||
-    (post.authorName && post.authorName.toLowerCase().includes(query))
-  );
+  // Фильтрация публикаций (защищено от undefined)
+  const filteredPosts = posts.filter(post => {
+    if (!post) return false;
+    const caption = post.caption || '';
+    const authorName = post.authorName || '';
+    return caption.toLowerCase().includes(query) || authorName.toLowerCase().includes(query);
+  });
 
   const showPeople = activeTab === 'all' || activeTab === 'people';
   const showPostsTab = activeTab === 'all' || activeTab === 'posts';
