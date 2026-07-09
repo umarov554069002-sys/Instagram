@@ -58,11 +58,20 @@ const PUBLIC_PROFILES = {
     fullName: 'Instagram',
     avatar: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=60',
     bio: 'Добро пожаловать в Instagram — платформа для общения, фотографии и видео. Делитесь моментами! ✨',
-    baseFollowers: 45000,
+    baseFollowers: 450000000,
     following: 12,
     products: ['prod-1', 'prod-2', 'prod-3'],
-    reels: [{ id: 'reel-3', index: 2, coverUrl: 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=300' }]
+    reels: [{ id: 'reel-3', index: 2, coverUrl: 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=300' }],
+    verified: true
   }
+};
+
+const formatFollowers = (count) => {
+  if (count >= 1e12) return (count / 1e12).toFixed(1).replace('.0', '') + ' трлн';
+  if (count >= 1e9) return (count / 1e9).toFixed(1).replace('.0', '') + ' млрд';
+  if (count >= 1e6) return (count / 1e6).toFixed(1).replace('.0', '') + ' млн';
+  if (count >= 1e3) return (count / 1e3).toFixed(1).replace('.0', '') + ' тыс.';
+  return count.toLocaleString();
 };
 
 export default function Profile() {
@@ -83,10 +92,11 @@ export default function Profile() {
         fullName: currentUser ? currentUser.email : 'Гость',
         avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=60',
         bio: 'Пользователь Instagram 📸. Обожаю стильные фотографии и качественный звук.',
-        baseFollowers: 152,
+        baseFollowers: 298000000000, // 298 млрд
         following: followingList.length,
         products: [],
-        reels: []
+        reels: [],
+        verified: true
       }
     : PUBLIC_PROFILES[id] || PUBLIC_PROFILES['chat-support']; // fallback на официальный профиль
 
@@ -156,7 +166,28 @@ export default function Profile() {
             
             {/* Никнейм и Кнопки действий */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '20px', flexWrap: 'wrap' }}>
-              <h2 style={{ fontSize: '20px', fontWeight: 600, margin: 0 }}>@{profile.name}</h2>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <h2 style={{ fontSize: '20px', fontWeight: 600, margin: 0 }}>@{profile.name}</h2>
+                {profile.verified && (
+                  <span 
+                    title="Подтвержденный аккаунт" 
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      backgroundColor: '#0095f6',
+                      color: 'white',
+                      borderRadius: '50%',
+                      width: '18px',
+                      height: '18px',
+                      padding: '2px',
+                      flexShrink: 0
+                    }}
+                  >
+                    <Check size={12} strokeWidth={4} color="white" />
+                  </span>
+                )}
+              </div>
               
               {!isMe ? (
                 <div style={{ display: 'flex', gap: '10px' }}>
@@ -213,10 +244,10 @@ export default function Profile() {
                 <strong>{!isMe ? profileProducts.length + profile.reels.length : 0}</strong> публикаций
               </span>
               <span>
-                <strong>{followersCount.toLocaleString()}</strong> подписчиков
+                <strong>{formatFollowers(followersCount)}</strong> подписчиков
               </span>
               <span>
-                <strong>{profile.following.toLocaleString()}</strong> подписок
+                <strong>{formatFollowers(profile.following)}</strong> подписок
               </span>
             </div>
 
