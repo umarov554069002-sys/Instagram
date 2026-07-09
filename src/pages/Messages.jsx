@@ -277,16 +277,36 @@ export default function Messages() {
         const messagesRef = collection(db, 'chats', activeChat.id, 'messages');
         const q = query(messagesRef, orderBy('timestamp', 'asc'));
         
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-          const fetchedMessages = snapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data(),
-            // Конвертируем Firestore timestamp в строку ISO
-            timestamp: doc.data().timestamp?.toDate()?.toISOString() || new Date().toISOString()
-          }));
-          setMessages(fetchedMessages);
-          setLoading(false);
-        });
+        const unsubscribe = onSnapshot(q, 
+          (snapshot) => {
+            const fetchedMessages = snapshot.docs.map(doc => ({
+              id: doc.id,
+              ...doc.data(),
+              // Конвертируем Firestore timestamp в строку ISO
+              timestamp: doc.data().timestamp?.toDate()?.toISOString() || new Date().toISOString()
+            }));
+            setMessages(fetchedMessages);
+            setLoading(false);
+          },
+          (error) => {
+            console.error("Ошибка Firestore при чтении сообщений:", error);
+            const savedMsgs = localStorage.getItem(`demo_msg_${activeChat.id}`);
+            if (savedMsgs) {
+              setMessages(JSON.parse(savedMsgs));
+            } else {
+              const initialMsg = {
+                id: 'init-1',
+                text: activeChat.id === 'chat-support' 
+                  ? 'Здравствуйте! Как я могу вам помочь сегодня?' 
+                  : `Привет! Я на связи. Задавай любой вопрос про наши товары!`,
+                senderId: activeChat.id,
+                timestamp: new Date().toISOString()
+              };
+              setMessages([initialMsg]);
+            }
+            setLoading(false);
+          }
+        );
 
         return () => unsubscribe();
       } catch (err) {

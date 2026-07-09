@@ -93,14 +93,25 @@ export default function Stories() {
       // Подключение к Firestore
       try {
         const q = query(collection(db, 'stories'), orderBy('createdAt', 'desc'));
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-          if (!snapshot.empty) {
-            const fetched = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            setStories(fetched);
-          } else {
-            setStories(DEFAULT_STORIES);
+        const unsubscribe = onSnapshot(q, 
+          (snapshot) => {
+            if (!snapshot.empty) {
+              const fetched = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+              setStories(fetched);
+            } else {
+              setStories(DEFAULT_STORIES);
+            }
+          },
+          (error) => {
+            console.error("Ошибка Firestore при чтении историй:", error);
+            const savedStories = localStorage.getItem('demo_stories');
+            if (savedStories) {
+              setStories(JSON.parse(savedStories));
+            } else {
+              setStories(DEFAULT_STORIES);
+            }
           }
-        });
+        );
         return () => unsubscribe();
       } catch (err) {
         console.error("Ошибка при чтении историй из Firebase:", err);

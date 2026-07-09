@@ -110,15 +110,27 @@ export default function Reels() {
     } else {
       try {
         const q = query(collection(db, 'reels'), orderBy('createdAt', 'desc'));
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-          if (!snapshot.empty) {
-            const fetched = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            setReels(fetched);
-          } else {
-            setReels(DEFAULT_REELS);
+        const unsubscribe = onSnapshot(q, 
+          (snapshot) => {
+            if (!snapshot.empty) {
+              const fetched = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+              setReels(fetched);
+            } else {
+              setReels(DEFAULT_REELS);
+            }
+            setLoading(false);
+          },
+          (error) => {
+            console.error("Ошибка Firestore при чтении рилсов:", error);
+            const savedReels = localStorage.getItem('demo_reels');
+            if (savedReels) {
+              setReels(JSON.parse(savedReels));
+            } else {
+              setReels(DEFAULT_REELS);
+            }
+            setLoading(false);
           }
-          setLoading(false);
-        });
+        );
         return () => unsubscribe();
       } catch (err) {
         console.error("Ошибка при чтении рилсов из Firebase:", err);
