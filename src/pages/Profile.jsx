@@ -1,10 +1,8 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Film, Grid, Heart, MessageSquare, User, Check, Bookmark } from 'lucide-react';
+import { Film, Grid, Heart, MessageSquare, Check, Bookmark } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useFollowing } from '../context/FollowingContext';
-import { useFavorites } from '../context/FavoritesContext';
-import { MOCK_PRODUCTS } from '../mockData';
 
 // База публичных профилей
 const PUBLIC_PROFILES = {
@@ -16,7 +14,6 @@ const PUBLIC_PROFILES = {
     bio: 'Fashion Блогер 🌟 | Обзоры на стильную одежду и аксессуары. По вопросам сотрудничества пишите в Direct ✉️',
     baseFollowers: 12400,
     following: 342,
-    products: ['prod-3'], // SoundFlow headphones
     reels: [{ id: 'reel-1', index: 0, coverUrl: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=300' }]
   },
   'chat-seller-1': {
@@ -24,10 +21,9 @@ const PUBLIC_PROFILES = {
     name: 'anna_sales',
     fullName: 'Анна 👜',
     avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=60',
-    bio: 'Официальный представитель Instagram. Помогаю с подбором размеров и оформлением заказов 🛍️',
+    bio: 'Официальный представитель Instagram. Помогаю с подбором размеров и контентом 🛍️',
     baseFollowers: 8900,
     following: 154,
-    products: ['prod-2'], // Leather handbag
     reels: [{ id: 'reel-2', index: 1, coverUrl: 'https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=300' }]
   },
   'chat-logistic': {
@@ -35,10 +31,9 @@ const PUBLIC_PROFILES = {
     name: 'sergey_logistic',
     fullName: 'Сергей 🚚',
     avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=60',
-    bio: 'Логистика Instagram. Быстрая доставка по всей стране. Вопросы по доставке пишите сюда 📦',
+    bio: 'Логистика Instagram. Быстрая доставка по всей стране. Вопросы пишите сюда 📦',
     baseFollowers: 3200,
     following: 89,
-    products: [],
     reels: []
   },
   'chat-sales': {
@@ -49,7 +44,6 @@ const PUBLIC_PROFILES = {
     bio: 'Оптовые закупки и спецпредложения для дилеров. Пишите по сотрудничеству!',
     baseFollowers: 4500,
     following: 23,
-    products: [],
     reels: []
   },
   'chat-support': {
@@ -60,7 +54,6 @@ const PUBLIC_PROFILES = {
     bio: 'Добро пожаловать в Instagram — платформа для общения, фотографии и видео. Делитесь моментами! ✨',
     baseFollowers: 450000000,
     following: 12,
-    products: ['prod-1', 'prod-2', 'prod-3'],
     reels: [{ id: 'reel-3', index: 2, coverUrl: 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=300' }],
     verified: true
   }
@@ -79,8 +72,8 @@ export default function Profile() {
   const navigate = useNavigate();
   const { currentUser } = useAuth();
   const { isFollowing, toggleFollow, followingList } = useFollowing();
-  const { favorites } = useFavorites();
   const [activeTab, setActiveTab] = useState('posts'); // posts, reels, saved
+  const [hoveredPostId, setHoveredPostId] = useState(null);
 
   const isMe = !id || id === 'me';
   
@@ -94,18 +87,29 @@ export default function Profile() {
         bio: 'Пользователь Instagram 📸. Обожаю стильные фотографии и качественный звук.',
         baseFollowers: 298000000000, // 298 млрд
         following: followingList.length,
-        products: [],
         reels: [],
         verified: true
       }
-    : PUBLIC_PROFILES[id] || PUBLIC_PROFILES['chat-support']; // fallback на официальный профиль
+    : PUBLIC_PROFILES[id] || PUBLIC_PROFILES['chat-support'];
 
   const isFollowingProfile = isFollowing(profile.id);
   const followersCount = profile.baseFollowers + (isFollowingProfile ? 1 : 0);
 
-  // Фильтруем товары для вкладок
-  const profileProducts = MOCK_PRODUCTS.filter(p => profile.products.includes(p.id));
-  const savedProducts = MOCK_PRODUCTS.filter(p => favorites.includes(p.id));
+  // Загружаем посты из localStorage
+  const [feedPosts] = useState(() => {
+    const saved = localStorage.getItem('ig_feed_posts');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {}
+    }
+    return [];
+  });
+
+  // Фильтруем посты автора
+  const profilePosts = feedPosts.filter(p => p.authorId === profile.id);
+  // Фильтруем сохраненные посты
+  const savedPosts = feedPosts.filter(p => p.saved);
 
   return (
     <div className="animate-fade-in" style={{ padding: '100px 0 60px', minHeight: 'calc(100vh - var(--header-height))', position: 'relative' }}>
@@ -241,7 +245,7 @@ export default function Profile() {
             {/* Счетчики активности */}
             <div style={{ display: 'flex', gap: '40px', fontSize: '15px' }}>
               <span>
-                <strong>{!isMe ? profileProducts.length + profile.reels.length : 0}</strong> публикаций
+                <strong>{profilePosts.length + profile.reels.length}</strong> публикаций
               </span>
               <span>
                 <strong>{formatFollowers(followersCount)}</strong> подписчиков
@@ -338,44 +342,55 @@ export default function Profile() {
 
         {/* Сетка Контента (Grid) */}
         <div>
-          {/* Публикации (Товары) */}
+          {/* Публикации */}
           {activeTab === 'posts' && (
-            profileProducts.length > 0 ? (
+            profilePosts.length > 0 ? (
               <div style={{
                 display: 'grid',
                 gridTemplateColumns: 'repeat(3, 1fr)',
                 gap: '24px'
               }}>
-                {profileProducts.map(prod => (
+                {profilePosts.map(post => (
                   <div 
-                    key={prod.id}
-                    onClick={() => navigate(`/product/${prod.id}`)}
-                    className="glass"
+                    key={post.id}
+                    onMouseEnter={() => setHoveredPostId(post.id)}
+                    onMouseLeave={() => setHoveredPostId(null)}
                     style={{
                       aspectRatio: '1',
                       borderRadius: 'var(--border-radius-md)',
                       overflow: 'hidden',
-                      cursor: 'pointer',
                       position: 'relative',
-                      transition: 'transform 0.2s'
+                      cursor: 'pointer',
+                      boxShadow: 'var(--shadow-sm)'
                     }}
-                    onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.02)'}
-                    onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
                   >
-                    <img src={prod.image} alt={prod.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    <div style={{
-                      position: 'absolute',
-                      bottom: 0,
-                      left: 0,
-                      width: '100%',
-                      padding: '10px',
-                      background: 'linear-gradient(to top, rgba(0,0,0,0.6) 0%, transparent 100%)',
-                      color: 'white',
-                      fontSize: '12px',
-                      fontWeight: 600
-                    }}>
-                      {prod.price.toLocaleString()} ₽
-                    </div>
+                    <img src={post.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    {hoveredPostId === post.id && (
+                      <div style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: '100%',
+                        height: '100%',
+                        backgroundColor: 'rgba(0,0,0,0.45)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '24px',
+                        color: 'white',
+                        fontWeight: '700',
+                        fontSize: '16px'
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <Heart size={20} fill="white" />
+                          <span>{post.likesCount}</span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <MessageSquare size={20} fill="white" />
+                          <span>{post.comments.length}</span>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -433,42 +448,53 @@ export default function Profile() {
 
           {/* Сохраненное (Избранное) */}
           {activeTab === 'saved' && isMe && (
-            savedProducts.length > 0 ? (
+            savedPosts.length > 0 ? (
               <div style={{
                 display: 'grid',
                 gridTemplateColumns: 'repeat(3, 1fr)',
                 gap: '24px'
               }}>
-                {savedProducts.map(prod => (
+                {savedPosts.map(post => (
                   <div 
-                    key={prod.id}
-                    onClick={() => navigate(`/product/${prod.id}`)}
-                    className="glass"
+                    key={post.id}
+                    onMouseEnter={() => setHoveredPostId(post.id)}
+                    onMouseLeave={() => setHoveredPostId(null)}
                     style={{
                       aspectRatio: '1',
                       borderRadius: 'var(--border-radius-md)',
                       overflow: 'hidden',
-                      cursor: 'pointer',
                       position: 'relative',
-                      transition: 'transform 0.2s'
+                      cursor: 'pointer',
+                      boxShadow: 'var(--shadow-sm)'
                     }}
-                    onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.02)'}
-                    onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
                   >
-                    <img src={prod.image} alt={prod.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    <div style={{
-                      position: 'absolute',
-                      bottom: 0,
-                      left: 0,
-                      width: '100%',
-                      padding: '10px',
-                      background: 'linear-gradient(to top, rgba(0,0,0,0.6) 0%, transparent 100%)',
-                      color: 'white',
-                      fontSize: '12px',
-                      fontWeight: 600
-                    }}>
-                      {prod.price.toLocaleString()} ₽
-                    </div>
+                    <img src={post.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    {hoveredPostId === post.id && (
+                      <div style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: '100%',
+                        height: '100%',
+                        backgroundColor: 'rgba(0,0,0,0.45)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '24px',
+                        color: 'white',
+                        fontWeight: '700',
+                        fontSize: '16px'
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <Heart size={20} fill="white" />
+                          <span>{post.likesCount}</span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <MessageSquare size={20} fill="white" />
+                          <span>{post.comments.length}</span>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -476,7 +502,7 @@ export default function Profile() {
               <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--text-tertiary)' }}>
                 <Bookmark size={40} style={{ marginBottom: '12px' }} />
                 <h3>Сохраненного пока нет</h3>
-                <p style={{ fontSize: '13px', marginTop: '6px' }}>Все товары, которые вы лайкнете, появятся здесь</p>
+                <p style={{ fontSize: '13px', marginTop: '6px' }}>Все публикации, которые вы добавите в закладки, появятся здесь</p>
               </div>
             )
           )}
