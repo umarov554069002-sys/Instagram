@@ -21,14 +21,14 @@ import { useFollowing } from '../context/FollowingContext';
 const DEMO_CHATS = [
   {
     id: 'chat-support',
-    name: 'Поддержка InstaStore 🤖',
+    name: 'Поддержка Instagram 🤖',
     avatar: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=100&auto=format&fit=crop&q=60',
     subtitle: 'Онлайн. Готовы помочь',
     botAnswers: [
-      'Привет! Я бот поддержки InstaStore. Чем могу помочь?',
+      'Привет! Я бот поддержки Instagram. Чем могу помочь?',
       'Наши операторы обычно отвечают в течение 10 минут. Опишите вашу проблему, пожалуйста.',
       'Все заказы доставляются в среднем за 2-3 дня. Номер накладной придет в SMS.',
-      'Спасибо за сообщение! Хорошего дня и приятных покупок в InstaStore!'
+      'Спасибо за сообщение! Хорошего дня в Instagram!'
     ]
   },
   {
@@ -71,7 +71,7 @@ const ALL_ACCOUNTS = [
   },
   {
     id: 'chat-sales',
-    name: 'instastore_sales (Оптовый отдел) 📈',
+    name: 'instagram_sales (Продажи) 📈',
     avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&auto=format&fit=crop&q=60',
     subtitle: 'Был(а) в сети 2 часа назад',
     botAnswers: [
@@ -177,7 +177,7 @@ export default function Messages() {
       subtitle: 'Онлайн',
       botAnswers: [
         `Привет! Я новый пользователь @${nickname}. Рад общению!`,
-        'Я сейчас немного занят покупками в InstaStore, отвечу позже!',
+        'Я сейчас немного занят, отвечу позже!',
         'Качество товаров здесь действительно отличное 👍'
       ]
     };

@@ -2,26 +2,12 @@ import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import Header from './components/Header';
 import Home from './pages/Home';
-import Catalog from './pages/Catalog';
-import ProductDetails from './pages/ProductDetails';
-import Cart from './pages/Cart';
 import Auth from './pages/Auth';
-import Admin from './pages/Admin';
 import Messages from './pages/Messages';
 import Reels from './pages/Reels';
-import Favorites from './pages/Favorites';
 import Explore from './pages/Explore';
 import Profile from './pages/Profile';
 import { useAuth } from './context/AuthContext';
-
-// Защищенный роут для админки
-const AdminRoute = ({ children }) => {
-  const { currentUser, loading } = useAuth();
-  
-  if (loading) return <div style={{ display: 'flex', justifyContent: 'center', padding: '100px' }}>Загрузка...</div>;
-  
-  return currentUser?.isAdmin ? children : <Navigate to="/auth" />;
-};
 
 export default function App() {
   return (
@@ -30,32 +16,20 @@ export default function App() {
       <main style={{ flexGrow: 1 }}>
         <Routes>
           <Route path="/" element={<Home />} />
-          <Route path="/catalog" element={<Catalog />} />
-          <Route path="/product/:id" element={<ProductDetails />} />
-          <Route path="/cart" element={<Cart />} />
           <Route path="/auth" element={<Auth />} />
           <Route path="/messages" element={<Messages />} />
           <Route path="/reels" element={<Reels />} />
-          <Route path="/favorites" element={<Favorites />} />
           <Route path="/explore" element={<Explore />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/profile/:id" element={<Profile />} />
-          <Route 
-            path="/admin" 
-            element={
-              <AdminRoute>
-                <Admin />
-              </AdminRoute>
-            } 
-          />
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
       </main>
-      <footer>
+      <footer style={{ borderTop: '1px solid var(--border-color)', padding: '20px 0', textAlign: 'center' }}>
         <div className="container">
-          <p style={{ fontWeight: 600, marginBottom: '8px' }}>InstaStore Clone</p>
+          <p style={{ fontWeight: 800, fontSize: '18px', marginBottom: '6px' }} className="gradient-text">Instagram</p>
           <p style={{ fontSize: '12px', color: 'var(--text-tertiary)' }}>
-            © {new Date().getFullYear()} Все права защищены. Построено на React, Node.js Serverless и Firebase.
+            © {new Date().getFullYear()} Instagram. Все права защищены.
           </p>
         </div>
       </footer>

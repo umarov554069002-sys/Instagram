@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Heart, Volume2, VolumeX, ShoppingBag, Music, ChevronUp, ChevronDown, Loader2, MessageCircle, X, Send, Eye } from 'lucide-react';
+import { Heart, Volume2, VolumeX, Music, ChevronUp, ChevronDown, Loader2, MessageCircle, X, Send, Eye } from 'lucide-react';
 import { db } from '../firebase';
 import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { useCart } from '../context/CartContext';
@@ -508,28 +508,6 @@ export default function Reels() {
             {muted ? <VolumeX size={20} /> : <Volume2 size={20} />}
           </button>
 
-          {/* Кнопка показа карточки товара */}
-          {linkedProduct && (
-            <button
-              onClick={() => setShowProductCard(!showProductCard)}
-              style={{
-                width: '46px',
-                height: '46px',
-                borderRadius: '50%',
-                backgroundColor: showProductCard ? 'var(--accent-pink)' : 'rgba(0,0,0,0.6)',
-                backdropFilter: 'blur(4px)',
-                border: '1px solid rgba(255,255,255,0.15)',
-                color: 'white',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                boxShadow: showProductCard ? '0 4px 10px rgba(225,48,108,0.3)' : 'none',
-                transition: 'all 0.2s'
-              }}
-            >
-              <ShoppingBag size={20} />
-            </button>
-          )}
         </div>
 
         {/* Текстовое описание рилса снизу */}
@@ -554,13 +532,6 @@ export default function Reels() {
               onClick={() => navigate(`/profile/${authorId}`)} 
               style={{ fontSize: '13px', fontWeight: 700, pointerEvents: 'auto', cursor: 'pointer' }}
             >{author.name}</span>
-            <span style={{
-              fontSize: '10px',
-              border: '1px solid rgba(255,255,255,0.4)',
-              borderRadius: '3px',
-              padding: '1px 4px',
-              fontWeight: 600
-            }}>Магазин</span>
 
             {/* Кнопка подписки */}
             <button
@@ -604,56 +575,12 @@ export default function Reels() {
                 paddingLeft: '100%',
                 animation: 'marquee 12s linear infinite'
               }}>
-                {activeReel.song || 'Original Sound - instastore'}
+                {activeReel.song || 'Original Sound'}
               </div>
             </div>
           </div>
         </div>
 
-        {/* Слайд-карточка привязанного товара */}
-        {linkedProduct && showProductCard && !showComments && (
-          <div className="animate-fade-in" style={{
-            position: 'absolute',
-            bottom: '95px',
-            left: '20px',
-            right: '20px',
-            backgroundColor: 'rgba(255, 255, 255, 0.95)',
-            color: '#262626',
-            borderRadius: 'var(--border-radius-md)',
-            padding: '12px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '12px',
-            boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
-            zIndex: 11,
-            backdropFilter: 'blur(8px)',
-            border: '1px solid rgba(255,255,255,0.2)'
-          }}>
-            <img src={linkedProduct.image} alt={linkedProduct.name} style={{ width: '48px', height: '48px', objectFit: 'cover', borderRadius: 'var(--border-radius-sm)' }} />
-            <div style={{ flexGrow: 1, minWidth: 0 }}>
-              <h4 style={{ fontSize: '13px', fontWeight: 700, margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {linkedProduct.name}
-              </h4>
-              <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--accent-pink)', marginTop: '2px', display: 'block' }}>
-                {linkedProduct.price.toLocaleString()} ₽
-              </span>
-            </div>
-            <button 
-              onClick={() => navigate(`/product/${linkedProduct.id}`)}
-              className="gradient-bg"
-              style={{
-                color: 'white',
-                fontSize: '11px',
-                fontWeight: 700,
-                padding: '8px 14px',
-                borderRadius: 'var(--border-radius-full)',
-                boxShadow: '0 2px 8px rgba(225,48,108,0.2)'
-              }}
-            >
-              Купить
-            </button>
-          </div>
-        )}
 
         {/* Выдвижное оверлей-окно комментариев рилса */}
         {showComments && (

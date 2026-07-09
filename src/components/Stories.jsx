@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { X, ChevronLeft, ChevronRight, ShoppingCart, Plus, Edit3, Image, Sparkles, Eye } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, Plus, Edit3, Image, Sparkles, Eye } from 'lucide-react';
 import { db } from '../firebase';
 import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { useAuth } from '../context/AuthContext';
@@ -530,38 +530,7 @@ export default function Stories() {
               </button>
             )}
 
-            {/* Кнопка "Купить" внизу */}
-            {stories[activeStoryIndex].productId && (
-              <div style={{
-                position: 'absolute',
-                bottom: 0,
-                left: 0,
-                width: '100%',
-                padding: '30px 20px 40px',
-                background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, transparent 100%)',
-                display: 'flex',
-                justifyContent: 'center',
-                zIndex: 12
-              }}>
-                <button 
-                  onClick={() => handleShopNow(stories[activeStoryIndex].productId)}
-                  className="btn btn-primary"
-                  style={{
-                    borderRadius: 'var(--border-radius-full)',
-                    padding: '12px 32px',
-                    fontSize: '14px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    boxShadow: '0 4px 15px rgba(225, 48, 108, 0.4)'
-                  }}
-                >
-                  <ShoppingCart size={16} /> В магазин
-                </button>
-              </div>
-            )}
 
-            {/* Выдвижная шторка со списком зрителей (Stories Viewers Drawer) */}
             {showViewersList && (
               <div style={{
                 position: 'absolute',

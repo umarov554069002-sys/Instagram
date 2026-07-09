@@ -1,16 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { ShoppingBag, User, Sun, Moon, LogOut, Package2, Shield, Send, Film, Heart, Search } from 'lucide-react';
-import { useCart } from '../context/CartContext';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Camera, User, Sun, Moon, LogOut, Send, Film, Search, Home, Compass } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { useFavorites } from '../context/FavoritesContext';
 
 export default function Header() {
-  const { getItemsCount } = useCart();
   const { currentUser, logout, isDemo } = useAuth();
-  const { getFavoritesCount } = useFavorites();
   const navigate = useNavigate();
-  
+  const location = useLocation();
+
   // Управление темой оформления (темная/светлая)
   const [theme, setTheme] = useState(() => {
     return localStorage.getItem('theme') || 'light';
@@ -34,6 +31,21 @@ export default function Header() {
     }
   };
 
+  const isActive = (path) => location.pathname === path;
+
+  const navIconStyle = (path) => ({
+    position: 'relative',
+    width: '44px',
+    height: '44px',
+    borderRadius: '12px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: isActive(path) ? 'var(--bg-tertiary)' : 'transparent',
+    color: isActive(path) ? 'var(--text-primary)' : 'var(--text-secondary)',
+    transition: 'all 0.15s'
+  });
+
   return (
     <header className="glass" style={{
       position: 'fixed',
@@ -48,51 +60,65 @@ export default function Header() {
       zIndex: 1000,
       borderBottom: '1px solid var(--border-color)',
     }}>
-      {/* Логотип */}
-      <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+      {/* Логотип Instagram */}
+      <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none' }}>
         <div className="gradient-bg" style={{
-          width: '40px',
-          height: '40px',
-          borderRadius: '12px',
+          width: '36px',
+          height: '36px',
+          borderRadius: '10px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          boxShadow: '0 4px 12px rgba(225, 48, 108, 0.2)'
+          boxShadow: '0 4px 12px rgba(225, 48, 108, 0.25)'
         }}>
-          <ShoppingBag size={20} color="white" />
+          <Camera size={18} color="white" />
         </div>
         <span style={{
-          fontSize: '20px',
+          fontSize: '22px',
           fontWeight: 800,
           letterSpacing: '-0.03em',
+          fontFamily: 'Plus Jakarta Sans, sans-serif'
         }}>
-          Insta<span className="gradient-text">Store</span>
+          <span className="gradient-text">Instagram</span>
         </span>
       </Link>
 
-      {/* Навигация */}
-      <nav style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
-        <Link to="/" style={{ fontWeight: 500, fontSize: '14px' }}>Главная</Link>
-        <Link to="/catalog" style={{ fontWeight: 500, fontSize: '14px' }}>Каталог</Link>
-        {currentUser?.isAdmin && (
-          <Link to="/admin" style={{ 
-            fontWeight: 500, 
-            fontSize: '14px', 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: '4px',
-            color: 'var(--accent-pink)'
-          }}>
-            <Shield size={14} /> Админ
-          </Link>
-        )}
+      {/* Центральная навигация — иконки как в настоящем Instagram */}
+      <nav style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <Link to="/" style={navIconStyle('/')} title="Главная"
+          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)'}
+          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = isActive('/') ? 'var(--bg-tertiary)' : 'transparent'}
+        >
+          <Home size={22} />
+        </Link>
+
+        <Link to="/explore" style={navIconStyle('/explore')} title="Поиск"
+          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)'}
+          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = isActive('/explore') ? 'var(--bg-tertiary)' : 'transparent'}
+        >
+          <Compass size={22} />
+        </Link>
+
+        <Link to="/reels" style={navIconStyle('/reels')} title="Reels"
+          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)'}
+          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = isActive('/reels') ? 'var(--bg-tertiary)' : 'transparent'}
+        >
+          <Film size={22} />
+        </Link>
+
+        <Link to="/messages" style={navIconStyle('/messages')} title="Сообщения"
+          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)'}
+          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = isActive('/messages') ? 'var(--bg-tertiary)' : 'transparent'}
+        >
+          <Send size={20} style={{ transform: 'rotate(-45deg)', margin: '0 0 2px 2px' }} />
+        </Link>
       </nav>
 
-      {/* Пользовательское меню */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+      {/* Правое меню: Тема + Профиль */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
         {/* Переключатель темы */}
-        <button 
-          onClick={toggleTheme} 
+        <button
+          onClick={toggleTheme}
           style={{
             width: '40px',
             height: '40px',
@@ -101,153 +127,18 @@ export default function Header() {
             alignItems: 'center',
             justifyContent: 'center',
             backgroundColor: 'var(--bg-tertiary)',
-            transition: 'background-color 0.2s',
-            color: 'var(--text-primary)'
+            color: 'var(--text-secondary)',
+            transition: 'background-color 0.2s'
           }}
           title="Сменить тему"
         >
           {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
         </button>
 
-        {/* Рилсы (Reels) */}
-        <Link 
-          to="/reels" 
-          style={{
-            position: 'relative',
-            width: '40px',
-            height: '40px',
-            borderRadius: '50%',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            backgroundColor: 'var(--bg-tertiary)',
-            color: 'var(--text-primary)'
-          }}
-          title="Рилсы (Reels)"
-        >
-          <Film size={18} />
-        </Link>
-
-        {/* Глобальный поиск (Explore) */}
-        <Link 
-          to="/explore" 
-          style={{
-            position: 'relative',
-            width: '40px',
-            height: '40px',
-            borderRadius: '50%',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            backgroundColor: 'var(--bg-tertiary)',
-            color: 'var(--text-primary)'
-          }}
-          title="Поиск и исследования"
-        >
-          <Search size={18} />
-        </Link>
-
-        {/* Сообщения (Direct) */}
-        <Link 
-          to="/messages" 
-          style={{
-            position: 'relative',
-            width: '40px',
-            height: '40px',
-            borderRadius: '50%',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            backgroundColor: 'var(--bg-tertiary)',
-            color: 'var(--text-primary)'
-          }}
-          title="Сообщения (Direct)"
-        >
-          <Send size={18} style={{ transform: 'rotate(-45deg)', margin: '0 0 2px 2px' }} />
-        </Link>
-
-        {/* Избранное */}
-        <Link 
-          to="/favorites" 
-          style={{
-            position: 'relative',
-            width: '40px',
-            height: '40px',
-            borderRadius: '50%',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            backgroundColor: 'var(--bg-tertiary)',
-            color: 'var(--text-primary)'
-          }}
-          title="Избранное"
-        >
-          <Heart size={18} />
-          {getFavoritesCount() > 0 && (
-            <span style={{
-              position: 'absolute',
-              top: '-4px',
-              right: '-4px',
-              background: 'var(--accent-gradient)',
-              color: 'white',
-              fontSize: '10px',
-              fontWeight: '700',
-              borderRadius: '50%',
-              width: '18px',
-              height: '18px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              boxShadow: '0 2px 6px rgba(225, 48, 108, 0.3)'
-            }}>
-              {getFavoritesCount()}
-            </span>
-          )}
-        </Link>
-
-        {/* Корзина */}
-        <Link 
-          to="/cart" 
-          style={{
-            position: 'relative',
-            width: '40px',
-            height: '40px',
-            borderRadius: '50%',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            backgroundColor: 'var(--bg-tertiary)',
-            color: 'var(--text-primary)'
-          }}
-          title="Корзина"
-        >
-          <Package2 size={18} />
-          {getItemsCount() > 0 && (
-            <span style={{
-              position: 'absolute',
-              top: '-4px',
-              right: '-4px',
-              background: 'var(--accent-gradient)',
-              color: 'white',
-              fontSize: '10px',
-              fontWeight: '700',
-              borderRadius: '50%',
-              width: '18px',
-              height: '18px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              boxShadow: '0 2px 6px rgba(225, 48, 108, 0.3)'
-            }}>
-              {getItemsCount()}
-            </span>
-          )}
-        </Link>
-
         {/* Профиль / Вход */}
         {currentUser ? (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <Link 
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <Link
               to="/profile"
               style={{
                 display: 'flex',
@@ -255,51 +146,54 @@ export default function Header() {
                 gap: '8px',
                 color: 'var(--text-primary)',
                 fontWeight: 600,
-                fontSize: '13px'
+                fontSize: '13px',
+                textDecoration: 'none'
               }}
               title="Мой профиль"
             >
               <div style={{
-                width: '32px',
-                height: '32px',
+                width: '34px',
+                height: '34px',
                 borderRadius: '50%',
                 overflow: 'hidden',
-                border: '1px solid var(--border-color)'
+                border: isActive('/profile') ? '2px solid var(--accent-pink)' : '2px solid var(--border-color)',
+                transition: 'border-color 0.2s'
               }}>
-                <img 
-                  src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100" 
-                  alt="" 
-                  style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                <img
+                  src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100"
+                  alt=""
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                 />
               </div>
-              <span>{currentUser.displayName || currentUser.email.split('@')[0]}</span>
+              <span style={{ display: 'none' }}>{currentUser.displayName || currentUser.email.split('@')[0]}</span>
             </Link>
-            <button 
+            <button
               onClick={handleLogout}
               style={{
-                width: '40px',
-                height: '40px',
+                width: '36px',
+                height: '36px',
                 borderRadius: '50%',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                backgroundColor: 'rgba(225, 48, 108, 0.1)',
+                backgroundColor: 'rgba(225, 48, 108, 0.08)',
                 color: 'var(--accent-pink)',
                 transition: 'all 0.2s'
               }}
               title="Выйти"
             >
-              <LogOut size={16} />
+              <LogOut size={15} />
             </button>
           </div>
         ) : (
-          <Link 
-            to="/auth" 
-            className="btn btn-secondary" 
-            style={{ 
-              padding: '8px 16px',
+          <Link
+            to="/auth"
+            className="btn btn-primary"
+            style={{
+              padding: '8px 20px',
               borderRadius: 'var(--border-radius-full)',
               fontSize: '13px',
+              fontWeight: 700,
               display: 'flex',
               alignItems: 'center',
               gap: '6px'
@@ -309,12 +203,12 @@ export default function Header() {
           </Link>
         )}
       </div>
-      
-      {/* Демо-баннер, если Firebase не настроен */}
+
+      {/* Демо-баннер */}
       {isDemo && (
         <div style={{
           position: 'absolute',
-          bottom: '-32px',
+          bottom: '-28px',
           left: 0,
           width: '100%',
           backgroundColor: '#ffcc00',
@@ -327,7 +221,7 @@ export default function Header() {
           letterSpacing: '0.05em',
           textTransform: 'uppercase'
         }}>
-          ⚠️ Запущен Демо-режим. Настройте ключи Firebase в файле .env для полноценной работы!
+          ⚠️ Демо-режим. Настройте Firebase в .env
         </div>
       )}
     </header>
