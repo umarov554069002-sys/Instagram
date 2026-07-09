@@ -550,7 +550,10 @@ export default function Reels() {
                 <img src={author.avatar} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               </div>
             </div>
-            <span style={{ fontSize: '13px', fontWeight: 700, pointerEvents: 'auto' }}>{author.name}</span>
+            <span 
+              onClick={() => navigate(`/profile/${authorId}`)} 
+              style={{ fontSize: '13px', fontWeight: 700, pointerEvents: 'auto', cursor: 'pointer' }}
+            >{author.name}</span>
             <span style={{
               fontSize: '10px',
               border: '1px solid rgba(255,255,255,0.4)',

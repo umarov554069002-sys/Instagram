@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { ArrowRight, Truck, RotateCcw, ShieldCheck, Heart, Film } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { ArrowRight, Truck, RotateCcw, ShieldCheck, Heart, Film, MessageCircle, Send, Bookmark, MoreHorizontal, ShoppingCart } from 'lucide-react';
 import { MOCK_PRODUCTS } from '../mockData';
-import ProductCard from '../components/ProductCard';
 import Stories from '../components/Stories';
 import { useFollowing } from '../context/FollowingContext';
+import { useFavorites } from '../context/FavoritesContext';
+import ShareModal from '../components/ShareModal';
 
 // Обложки по умолчанию для рилсов на случай отсутствия в localStorage
 const FALLBACK_REELS = [
@@ -56,9 +57,70 @@ const SUGGESTED_PROFILES = [
   }
 ];
 
+// Данные постов в ленте
+const DEFAULT_FEED_POSTS = [
+  {
+    id: 'post-1',
+    productId: 'prod-1',
+    authorId: 'chat-support',
+    authorName: 'instastore_official',
+    avatar: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=100&auto=format&fit=crop&q=60',
+    location: 'Москва, Россия',
+    likesCount: 1420,
+    liked: false,
+    caption: 'Умные часы Pulse — это идеальный баланс стиля и функционала! Мониторинг пульса, шагомер, и до 14 дней автономной работы. В наличии во всех цветах! ⌚🔥',
+    comments: [
+      { id: 'c-1', author: 'ivan_style', text: 'Часы супер! Пользуюсь уже месяц 👍' },
+      { id: 'c-2', author: 'dmitry_cool', text: 'Есть доставка в Питер?' }
+    ]
+  },
+  {
+    id: 'post-2',
+    productId: 'prod-2',
+    authorId: 'chat-seller-1',
+    authorName: 'anna_sales',
+    avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&auto=format&fit=crop&q=60',
+    location: 'Казань, Россия',
+    likesCount: 890,
+    liked: false,
+    caption: 'Минималистичный дизайн и натуральная кожа. Идеально под любой образ. Лимитированная серия сумок! 👜✨',
+    comments: [
+      { id: 'c-3', author: 'maria_style', text: 'Она прекрасна! Хочу такую себе 😍' }
+    ]
+  },
+  {
+    id: 'post-3',
+    productId: 'post-3',
+    productIdLink: 'prod-3',
+    authorId: 'chat-maria',
+    authorName: 'maria_style',
+    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=60',
+    location: 'Сочи, Россия',
+    likesCount: 2450,
+    liked: false,
+    caption: 'Новый взгляд на качественный звук! Беспроводные наушники SoundFlow с активным шумоподавлением. Чистый бас и кристальный звук! 🎧💙',
+    comments: [
+      { id: 'c-4', author: 'instastore_official', text: 'Спасибо за отзыв, Маша!' }
+    ]
+  }
+];
+
 export default function Home() {
+  const navigate = useNavigate();
   const [reelsList, setReelsList] = useState([]);
   const { isFollowing, toggleFollow } = useFollowing();
+  const { favorites, toggleFavorite } = useFavorites();
+
+  // Состояния для постов ленты (лайки, комментарии, инпуты)
+  const [posts, setPosts] = useState(() => {
+    const saved = localStorage.getItem('demo_feed_posts');
+    return saved ? JSON.parse(saved) : DEFAULT_FEED_POSTS;
+  });
+  const [commentInputs, setCommentInputs] = useState({});
+
+  // Состояние модалки репоста
+  const [isShareOpen, setIsShareOpen] = useState(false);
+  const [shareItem, setShareItem] = useState(null);
 
   // Загрузка популярных рилсов
   useEffect(() => {
@@ -70,8 +132,55 @@ export default function Home() {
     }
   }, []);
 
-  // Показываем первые 3 товара как рекомендуемые
-  const featuredProducts = MOCK_PRODUCTS.slice(0, 3);
+  const handleLikePost = (postId) => {
+    setPosts(prev => {
+      const next = prev.map(post => {
+        if (post.id === postId) {
+          const isL = !post.liked;
+          return {
+            ...post,
+            liked: isL,
+            likesCount: isL ? post.likesCount + 1 : post.likesCount - 1
+          };
+        }
+        return post;
+      });
+      localStorage.setItem('demo_feed_posts', JSON.stringify(next));
+      return next;
+    });
+  };
+
+  const handleAddComment = (postId, e) => {
+    e.preventDefault();
+    const commentText = commentInputs[postId] || '';
+    if (!commentText.trim()) return;
+
+    setPosts(prev => {
+      const next = prev.map(post => {
+        if (post.id === postId) {
+          return {
+            ...post,
+            comments: [
+              ...post.comments,
+              {
+                id: 'c-' + Date.now(),
+                author: 'Покупатель',
+                text: commentText.trim()
+              }
+            ]
+          };
+        }
+        return post;
+      });
+      localStorage.setItem('demo_feed_posts', JSON.stringify(next));
+      return next;
+    });
+
+    setCommentInputs(prev => ({
+      ...prev,
+      [postId]: ''
+    }));
+  };
 
   const categories = [
     { name: 'Одежда', count: 1, image: 'https://images.unsplash.com/photo-1483985988355-763728e1935b?w=200&auto=format&fit=crop&q=60' },
@@ -135,8 +244,8 @@ export default function Home() {
               <Link to="/catalog" className="btn btn-primary" style={{ padding: '16px 32px', borderRadius: 'var(--border-radius-full)' }}>
                 В каталог <ArrowRight size={18} />
               </Link>
-              <a href="#featured" className="btn btn-secondary" style={{ padding: '16px 32px', borderRadius: 'var(--border-radius-full)' }}>
-                Популярное
+              <a href="#featured-feed" className="btn btn-secondary" style={{ padding: '16px 32px', borderRadius: 'var(--border-radius-full)' }}>
+                Лента новостей
               </a>
             </div>
           </div>
@@ -257,17 +366,26 @@ export default function Home() {
                   }}
                 >
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                    <div style={{
-                      width: '72px',
-                      height: '72px',
-                      borderRadius: '50%',
-                      overflow: 'hidden',
-                      marginBottom: '14px',
-                      border: '2px solid var(--border-color)'
-                    }}>
+                    <div 
+                      onClick={() => navigate(`/profile/${profile.id}`)}
+                      style={{
+                        width: '72px',
+                        height: '72px',
+                        borderRadius: '50%',
+                        overflow: 'hidden',
+                        marginBottom: '14px',
+                        border: '2px solid var(--border-color)',
+                        cursor: 'pointer'
+                      }}
+                    >
                       <img src={profile.avatar} alt={profile.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     </div>
-                    <h3 style={{ fontSize: '15px', fontWeight: 700, marginBottom: '4px' }}>@{profile.name}</h3>
+                    <h3 
+                      onClick={() => navigate(`/profile/${profile.id}`)}
+                      style={{ fontSize: '15px', fontWeight: 700, marginBottom: '4px', cursor: 'pointer' }}
+                    >
+                      @{profile.name}
+                    </h3>
                     <span style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '16px', display: 'block' }}>
                       {profile.desc}
                     </span>
@@ -423,33 +541,202 @@ export default function Home() {
         </section>
       )}
 
-      {/* Рекомендуемые товары */}
-      <section id="featured" style={{ padding: '60px 0', borderBottom: '1px solid var(--border-color)' }}>
-        <div className="container">
-          <div style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'flex-end',
-            marginBottom: '40px'
-          }}>
-            <div>
-              <h2 style={{ fontSize: '32px', marginBottom: '8px' }}>Тренды недели</h2>
-              <p style={{ color: 'var(--text-secondary)' }}>Выбор наших покупателей</p>
-            </div>
-            <Link to="/catalog" className="btn-text" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-              Все товары <ArrowRight size={16} />
-            </Link>
+      {/* Лента новостей в стиле Instagram (Home Feed) */}
+      <section id="featured-feed" style={{ padding: '60px 0', borderBottom: '1px solid var(--border-color)' }}>
+        <div className="container" style={{ maxWidth: '600px' }}>
+          
+          <div style={{ textAlign: 'center', marginBottom: '40px' }}>
+            <h2 style={{ fontSize: '32px', marginBottom: '8px' }}>Лента новостей</h2>
+            <p style={{ color: 'var(--text-secondary)' }}>Новые посты и обзоры товаров от продавцов</p>
           </div>
 
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-            gap: '30px'
-          }}>
-            {featuredProducts.map(product => (
-              <ProductCard key={product.id} product={product} />
-            ))}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '40px' }}>
+            {posts.map(post => {
+              const product = MOCK_PRODUCTS.find(p => p.id === (post.productIdLink || post.productId));
+              const isFav = favorites.includes(product?.id);
+              
+              return (
+                <div key={post.id} className="glass" style={{
+                  borderRadius: 'var(--border-radius-lg)',
+                  overflow: 'hidden',
+                  boxShadow: 'var(--shadow-sm)',
+                  display: 'flex',
+                  flexDirection: 'column'
+                }}>
+                  
+                  {/* Пост Хедер */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 18px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <div 
+                        onClick={() => navigate(`/profile/${post.authorId}`)}
+                        style={{ width: '36px', height: '36px', borderRadius: '50%', overflow: 'hidden', cursor: 'pointer', border: '1.5px solid var(--border-color)' }}
+                      >
+                        <img src={post.avatar} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      </div>
+                      <div>
+                        <strong 
+                          onClick={() => navigate(`/profile/${post.authorId}`)}
+                          style={{ fontSize: '13px', fontWeight: 700, cursor: 'pointer', display: 'block' }}
+                        >
+                          {post.authorName}
+                        </strong>
+                        <span style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>{post.location}</span>
+                      </div>
+                    </div>
+                    <button style={{ color: 'var(--text-secondary)' }}><MoreHorizontal size={18} /></button>
+                  </div>
+
+                  {/* Картинка поста (изображение товара) */}
+                  <div style={{ width: '100%', aspectRatio: '1', overflow: 'hidden', position: 'relative', borderTop: '1px solid var(--border-color)', borderBottom: '1px solid var(--border-color)' }}>
+                    <img 
+                      src={product?.image || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600'} 
+                      alt="" 
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                    />
+                    
+                    {/* Плавающий ценник */}
+                    {product && (
+                      <div style={{
+                        position: 'absolute',
+                        bottom: '20px',
+                        left: '20px',
+                        backgroundColor: 'rgba(0,0,0,0.75)',
+                        color: 'white',
+                        padding: '6px 12px',
+                        borderRadius: 'var(--border-radius-full)',
+                        fontSize: '12px',
+                        fontWeight: 700,
+                        backdropFilter: 'blur(4px)'
+                      }}>
+                        {product.price.toLocaleString()} ₽
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Панель иконок действий */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 18px 8px' }}>
+                    <div style={{ display: 'flex', gap: '16px' }}>
+                      <button 
+                        onClick={() => handleLikePost(post.id)}
+                        style={{ color: post.liked ? 'var(--accent-pink)' : 'var(--text-primary)', transition: 'transform 0.1s' }}
+                        onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.8)'}
+                        onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                      >
+                        <Heart size={20} fill={post.liked ? 'var(--accent-pink)' : 'none'} />
+                      </button>
+                      <button style={{ color: 'var(--text-primary)' }}>
+                        <MessageCircle size={20} />
+                      </button>
+                      <button 
+                        onClick={() => {
+                          if (product) {
+                            setShareItem(product);
+                            setIsShareOpen(true);
+                          }
+                        }}
+                        style={{ color: 'var(--text-primary)' }}
+                      >
+                        <Send size={20} style={{ transform: 'rotate(-45deg)' }} />
+                      </button>
+                    </div>
+                    
+                    <button 
+                      onClick={() => product && toggleFavorite(product.id)}
+                      style={{ color: isFav ? 'var(--accent-pink)' : 'var(--text-primary)' }}
+                    >
+                      <Bookmark size={20} fill={isFav ? 'var(--accent-pink)' : 'none'} />
+                    </button>
+                  </div>
+
+                  {/* Лайки */}
+                  <div style={{ padding: '0 18px 4px', fontSize: '13px', fontWeight: 700 }}>
+                    Нравится: {post.likesCount.toLocaleString()}
+                  </div>
+
+                  {/* Подпись к посту (Caption) */}
+                  <div style={{ padding: '0 18px 8px', fontSize: '13px', lineHeight: '1.4' }}>
+                    <strong style={{ marginRight: '6px' }}>{post.authorName}</strong>
+                    <span style={{ color: 'var(--text-secondary)' }}>{post.caption}</span>
+                  </div>
+
+                  {/* Список комментариев */}
+                  {post.comments.length > 0 && (
+                    <div style={{ padding: '0 18px 8px', display: 'flex', flexDirection: 'column', gap: '4px', borderTop: '1px solid rgba(255,255,255,0.03)', paddingTop: '8px' }}>
+                      {post.comments.map(c => (
+                        <div key={c.id} style={{ fontSize: '12px' }}>
+                          <strong style={{ marginRight: '6px' }}>{c.author}</strong>
+                          <span style={{ color: 'var(--text-secondary)' }}>{c.text}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Кнопка "Купить" и Форма ввода комментария */}
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    borderTop: '1px solid var(--border-color)',
+                    padding: '8px 12px'
+                  }}>
+                    {product && (
+                      <button
+                        onClick={() => navigate(`/product/${product.id}`)}
+                        className="gradient-bg"
+                        style={{
+                          color: 'white',
+                          fontSize: '11px',
+                          fontWeight: 700,
+                          padding: '8px 14px',
+                          borderRadius: 'var(--border-radius-full)',
+                          marginRight: '12px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          boxShadow: '0 2px 8px rgba(225,48,108,0.2)'
+                        }}
+                      >
+                        <ShoppingCart size={12} /> В магазин
+                      </button>
+                    )}
+                    
+                    <form 
+                      onSubmit={(e) => handleAddComment(post.id, e)}
+                      style={{ display: 'flex', flexGrow: 1, alignItems: 'center' }}
+                    >
+                      <input 
+                        type="text" 
+                        placeholder="Добавьте комментарий..." 
+                        value={commentInputs[post.id] || ''}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setCommentInputs(prev => ({ ...prev, [post.id]: val }));
+                        }}
+                        style={{
+                          flexGrow: 1,
+                          height: '32px',
+                          border: 'none',
+                          outline: 'none',
+                          fontSize: '12px',
+                          backgroundColor: 'transparent',
+                          color: 'var(--text-primary)'
+                        }}
+                      />
+                      <button 
+                        type="submit" 
+                        disabled={!(commentInputs[post.id] || '').trim()}
+                        className="btn-text"
+                        style={{ fontSize: '12px', fontWeight: 700, color: 'var(--accent-pink)', opacity: !(commentInputs[post.id] || '').trim() ? 0.5 : 1 }}
+                      >
+                        Опубликовать
+                      </button>
+                    </form>
+                  </div>
+
+                </div>
+              );
+            })}
           </div>
+
         </div>
       </section>
 
@@ -526,6 +813,16 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {/* Модалка репоста */}
+      {shareItem && (
+        <ShareModal 
+          isOpen={isShareOpen}
+          onClose={() => { setIsShareOpen(false); setShareItem(null); }}
+          item={shareItem}
+          type="product"
+        />
+      )}
     </div>
   );
 }

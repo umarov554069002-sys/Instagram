@@ -247,14 +247,33 @@ export default function Header() {
         {/* Профиль / Вход */}
         {currentUser ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <span style={{
-              fontSize: '13px',
-              fontWeight: 500,
-              color: 'var(--text-secondary)'
-            }}>
-              {currentUser.displayName || currentUser.email}
-              {currentUser.isDemo && ' (Демо)'}
-            </span>
+            <Link 
+              to="/profile"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                color: 'var(--text-primary)',
+                fontWeight: 600,
+                fontSize: '13px'
+              }}
+              title="Мой профиль"
+            >
+              <div style={{
+                width: '32px',
+                height: '32px',
+                borderRadius: '50%',
+                overflow: 'hidden',
+                border: '1px solid var(--border-color)'
+              }}>
+                <img 
+                  src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100" 
+                  alt="" 
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                />
+              </div>
+              <span>{currentUser.displayName || currentUser.email.split('@')[0]}</span>
+            </Link>
             <button 
               onClick={handleLogout}
               style={{

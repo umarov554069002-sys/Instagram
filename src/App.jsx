@@ -11,6 +11,7 @@ import Messages from './pages/Messages';
 import Reels from './pages/Reels';
 import Favorites from './pages/Favorites';
 import Explore from './pages/Explore';
+import Profile from './pages/Profile';
 import { useAuth } from './context/AuthContext';
 
 // Защищенный роут для админки
@@ -37,6 +38,8 @@ export default function App() {
           <Route path="/reels" element={<Reels />} />
           <Route path="/favorites" element={<Favorites />} />
           <Route path="/explore" element={<Explore />} />
+          <Route path="/profile" element={<Profile />} />
+          <Route path="/profile/:id" element={<Profile />} />
           <Route 
             path="/admin" 
             element={
