@@ -111,15 +111,21 @@ export default function Profile() {
       const docRef = doc(db, 'profiles', profileId);
       const unsubscribe = onSnapshot(docRef, 
         async (snapshot) => {
-          if (snapshot.exists()) {
-            setProfileData(snapshot.data());
-          } else {
-            // Если профиля нет в бд, создаем его
-            const defaultProfile = getLocalProfile(profileId);
-            await setDoc(docRef, defaultProfile);
-            setProfileData(defaultProfile);
+          try {
+            if (snapshot.exists()) {
+              setProfileData(snapshot.data());
+            } else {
+              // Если профиля нет в бд, создаем его
+              const defaultProfile = getLocalProfile(profileId);
+              await setDoc(docRef, defaultProfile);
+              setProfileData(defaultProfile);
+            }
+            setLoading(false);
+          } catch (err) {
+            console.error("[Firestore] Ошибка при инициализации/загрузке профиля:", err);
+            setProfileData(getLocalProfile(profileId));
+            setLoading(false);
           }
-          setLoading(false);
         },
         (error) => {
           console.error("Ошибка при чтении профиля из Firestore:", error);

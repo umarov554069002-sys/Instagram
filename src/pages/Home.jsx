@@ -132,25 +132,32 @@ export default function Home() {
         
         const unsubscribe = onSnapshot(q, 
           async (snapshot) => {
-            if (snapshot.empty) {
-              console.log("[Firestore] База постов пуста. Производится автозаполнение...");
-              // Создаем посты последовательно, чтобы избежать дублирования
-              for (const post of DEFAULT_FEED) {
-                await setDoc(doc(db, 'posts', post.id), {
-                  ...post,
-                  likedBy: [],
-                  savedBy: [],
-                  createdAt: new Date().toISOString()
-                });
+            try {
+              if (snapshot.empty) {
+                console.log("[Firestore] База постов пуста. Производится автозаполнение...");
+                // Создаем посты последовательно, чтобы избежать дублирования
+                for (const post of DEFAULT_FEED) {
+                  await setDoc(doc(db, 'posts', post.id), {
+                    ...post,
+                    likedBy: [],
+                    savedBy: [],
+                    createdAt: new Date().toISOString()
+                  });
+                }
+              } else {
+                const fetched = snapshot.docs.map(doc => ({
+                  id: doc.id,
+                  ...doc.data()
+                }));
+                setPosts(fetched);
               }
-            } else {
-              const fetched = snapshot.docs.map(doc => ({
-                id: doc.id,
-                ...doc.data()
-              }));
-              setPosts(fetched);
+              setLoading(false);
+            } catch (err) {
+              console.error("[Firestore] Ошибка во время автозаполнения/обработки постов:", err);
+              const saved = localStorage.getItem('ig_feed_posts');
+              setPosts(saved ? JSON.parse(saved) : DEFAULT_FEED);
+              setLoading(false);
             }
-            setLoading(false);
           },
           (error) => {
             console.error("[Firestore] Ошибка при чтении постов:", error);

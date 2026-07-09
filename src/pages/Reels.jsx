@@ -111,21 +111,28 @@ export default function Reels() {
         
         const unsubscribe = onSnapshot(q, 
           async (snapshot) => {
-            if (snapshot.empty) {
-              console.log("[Firestore] База рилсов пуста. Производится автозаполнение...");
-              for (const reel of DEFAULT_REELS) {
-                await setDoc(doc(db, 'reels', reel.id), {
-                  ...reel,
-                  likedBy: [],
-                  comments: SEED_COMMENTS[reel.id] || [],
-                  createdAt: new Date().toISOString()
-                });
+            try {
+              if (snapshot.empty) {
+                console.log("[Firestore] База рилсов пуста. Производится автозаполнение...");
+                for (const reel of DEFAULT_REELS) {
+                  await setDoc(doc(db, 'reels', reel.id), {
+                    ...reel,
+                    likedBy: [],
+                    comments: SEED_COMMENTS[reel.id] || [],
+                    createdAt: new Date().toISOString()
+                  });
+                }
+              } else {
+                const fetched = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                setReels(fetched);
               }
-            } else {
-              const fetched = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-              setReels(fetched);
+              setLoading(false);
+            } catch (err) {
+              console.error("[Firestore] Ошибка во время автозаполнения/обработки рилсов:", err);
+              const savedReels = localStorage.getItem('demo_reels');
+              setReels(savedReels ? JSON.parse(savedReels) : DEFAULT_REELS);
+              setLoading(false);
             }
-            setLoading(false);
           },
           (error) => {
             console.error("Ошибка Firestore при чтении рилсов:", error);
