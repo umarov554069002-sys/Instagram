@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Film, Grid, Heart, MessageSquare, Check, Bookmark } from 'lucide-react';
+import { Film, Grid, Heart, MessageSquare, Check, Bookmark, Loader2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useFollowing } from '../context/FollowingContext';
+import { db } from '../firebase';
+import { doc, onSnapshot, setDoc, updateDoc } from 'firebase/firestore';
 
 // База публичных профилей
 const PUBLIC_PROFILES = {
@@ -72,14 +74,19 @@ export default function Profile() {
   const navigate = useNavigate();
   const { currentUser } = useAuth();
   const { isFollowing, toggleFollow, followedIds } = useFollowing();
+  
+  const [profileData, setProfileData] = useState(null);
   const [activeTab, setActiveTab] = useState('posts'); // posts, reels, saved
   const [hoveredPostId, setHoveredPostId] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   const isMe = !id || id === 'me';
-  
-  // Профиль для рендеринга
-  const profile = isMe 
-    ? {
+  const profileId = isMe ? 'me' : id;
+  const isDemo = !db;
+
+  const getLocalProfile = (pid) => {
+    if (pid === 'me') {
+      return {
         id: 'me',
         name: currentUser ? (currentUser.displayName || currentUser.email.split('@')[0]) : 'guest_user',
         fullName: currentUser ? currentUser.email : 'Гость',
@@ -89,11 +96,62 @@ export default function Profile() {
         following: followedIds.length,
         reels: [],
         verified: true
-      }
-    : PUBLIC_PROFILES[id] || PUBLIC_PROFILES['chat-support'];
+      };
+    }
+    return PUBLIC_PROFILES[pid] || PUBLIC_PROFILES['chat-support'];
+  };
 
-  const isFollowingProfile = isFollowing(profile.id);
-  const followersCount = profile.baseFollowers + (isFollowingProfile ? 1 : 0);
+  // Загрузка и синхронизация профиля с Firestore
+  useEffect(() => {
+    setLoading(true);
+    if (isDemo) {
+      setProfileData(getLocalProfile(profileId));
+      setLoading(false);
+    } else {
+      const docRef = doc(db, 'profiles', profileId);
+      const unsubscribe = onSnapshot(docRef, 
+        async (snapshot) => {
+          if (snapshot.exists()) {
+            setProfileData(snapshot.data());
+          } else {
+            // Если профиля нет в бд, создаем его
+            const defaultProfile = getLocalProfile(profileId);
+            await setDoc(docRef, defaultProfile);
+            setProfileData(defaultProfile);
+          }
+          setLoading(false);
+        },
+        (error) => {
+          console.error("Ошибка при чтении профиля из Firestore:", error);
+          setProfileData(getLocalProfile(profileId));
+          setLoading(false);
+        }
+      );
+      return () => unsubscribe();
+    }
+  }, [profileId, isDemo, currentUser, followedIds.length]);
+
+  const handleToggleFollow = async () => {
+    if (!profileData) return;
+    const isFollowingProfile = isFollowing(profileData.id);
+
+    // Обновляем подписки локально
+    toggleFollow(profileData.id);
+
+    if (!isDemo) {
+      try {
+        const nextFollowers = isFollowingProfile
+          ? Math.max(0, profileData.baseFollowers - 1)
+          : profileData.baseFollowers + 1;
+        
+        await updateDoc(doc(db, 'profiles', profileData.id), {
+          baseFollowers: nextFollowers
+        });
+      } catch (e) {
+        console.error("Ошибка при изменении подписки в Firestore:", e);
+      }
+    }
+  };
 
   // Загружаем посты из localStorage
   const [feedPosts] = useState(() => {
@@ -107,9 +165,27 @@ export default function Profile() {
   });
 
   // Фильтруем посты автора
-  const profilePosts = feedPosts.filter(p => p.authorId === profile.id);
+  const profilePosts = feedPosts.filter(p => p.authorId === (profileData?.id));
   // Фильтруем сохраненные посты
   const savedPosts = feedPosts.filter(p => p.saved);
+
+  if (loading || !profileData) {
+    return (
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: '100vh',
+        color: 'var(--text-secondary)'
+      }}>
+        <Loader2 size={40} className="animate-spin" style={{ color: 'var(--accent-pink)' }} />
+        <span style={{ marginTop: '12px' }}>Загрузка профиля...</span>
+      </div>
+    );
+  }
+
+  const isFollowingProfile = isFollowing(profileData.id);
 
   return (
     <div className="animate-fade-in" style={{ padding: '100px 0 60px', minHeight: 'calc(100vh - var(--header-height))', position: 'relative' }}>
@@ -152,8 +228,8 @@ export default function Profile() {
               boxShadow: 'var(--shadow-md)'
             }}>
               <img 
-                src={profile.avatar} 
-                alt={profile.name} 
+                src={profileData.avatar} 
+                alt={profileData.name} 
                 style={{
                   width: '100%',
                   height: '100%',
@@ -171,8 +247,8 @@ export default function Profile() {
             {/* Никнейм и Кнопки действий */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '20px', flexWrap: 'wrap' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <h2 style={{ fontSize: '20px', fontWeight: 600, margin: 0 }}>@{profile.name}</h2>
-                {profile.verified && (
+                <h2 style={{ fontSize: '20px', fontWeight: 600, margin: 0 }}>@{profileData.name}</h2>
+                {profileData.verified && (
                   <span 
                     title="Подтвержденный аккаунт" 
                     style={{
@@ -196,7 +272,7 @@ export default function Profile() {
               {!isMe ? (
                 <div style={{ display: 'flex', gap: '10px' }}>
                   <button
-                    onClick={() => toggleFollow(profile.id)}
+                    onClick={handleToggleFollow}
                     className={isFollowingProfile ? "btn btn-secondary" : "btn btn-primary"}
                     style={{
                       padding: '6px 20px',
@@ -209,7 +285,7 @@ export default function Profile() {
                     {isFollowingProfile ? 'Подписки' : 'Подписаться'}
                   </button>
                   <button
-                    onClick={() => navigate('/messages', { state: { selectChatId: profile.id } })}
+                    onClick={() => navigate('/messages', { state: { selectChatId: profileData.id } })}
                     className="btn btn-secondary"
                     style={{
                       padding: '6px 14px',
@@ -245,21 +321,21 @@ export default function Profile() {
             {/* Счетчики активности */}
             <div style={{ display: 'flex', gap: '40px', fontSize: '15px' }}>
               <span>
-                <strong>{profilePosts.length + profile.reels.length}</strong> публикаций
+                <strong>{profilePosts.length + (profileData.reels ? profileData.reels.length : 0)}</strong> публикаций
               </span>
               <span>
-                <strong>{formatFollowers(followersCount)}</strong> подписчиков
+                <strong>{formatFollowers(profileData.baseFollowers)}</strong> подписчиков
               </span>
               <span>
-                <strong>{formatFollowers(profile.following)}</strong> подписок
+                <strong>{formatFollowers(profileData.following)}</strong> подписок
               </span>
             </div>
 
             {/* Биография (Bio) */}
             <div>
-              <strong style={{ display: 'block', fontSize: '15px', marginBottom: '4px' }}>{profile.fullName}</strong>
+              <strong style={{ display: 'block', fontSize: '15px', marginBottom: '4px' }}>{profileData.fullName}</strong>
               <p style={{ fontSize: '14px', color: 'var(--text-secondary)', lineHeight: '1.5', margin: 0 }}>
-                {profile.bio}
+                {profileData.bio}
               </p>
             </div>
 
@@ -387,7 +463,7 @@ export default function Profile() {
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                           <MessageSquare size={20} fill="white" />
-                          <span>{post.comments.length}</span>
+                          <span>{post.comments ? post.comments.length : 0}</span>
                         </div>
                       </div>
                     )}
@@ -404,13 +480,13 @@ export default function Profile() {
 
           {/* Reels */}
           {activeTab === 'reels' && (
-            profile.reels.length > 0 ? (
+            profileData.reels && profileData.reels.length > 0 ? (
               <div style={{
                 display: 'grid',
                 gridTemplateColumns: 'repeat(3, 1fr)',
                 gap: '24px'
               }}>
-                {profile.reels.map(reel => (
+                {profileData.reels.map(reel => (
                   <div 
                     key={reel.id}
                     onClick={() => navigate(`/reels?index=${reel.index}`)}
@@ -491,7 +567,7 @@ export default function Profile() {
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                           <MessageSquare size={20} fill="white" />
-                          <span>{post.comments.length}</span>
+                          <span>{post.comments ? post.comments.length : 0}</span>
                         </div>
                       </div>
                     )}
