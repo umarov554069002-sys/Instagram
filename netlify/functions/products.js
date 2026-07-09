@@ -34,7 +34,7 @@ const MOCK_PRODUCTS = [
   }
 ];
 
-exports.handler = async function(event, context) {
+export const handler = async function(event, context) {
   // Обработка CORS
   const headers = {
     'Access-Control-Allow-Origin': '*',

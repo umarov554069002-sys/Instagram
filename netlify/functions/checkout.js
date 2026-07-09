@@ -1,7 +1,7 @@
 // Netlify Serverless Function: Оформление заказа
 // Путь: /api/checkout
 
-exports.handler = async function(event, context) {
+export const handler = async function(event, context) {
   // Обработка CORS
   const headers = {
     'Access-Control-Allow-Origin': '*',
