@@ -1,57 +1,47 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Film, ShoppingBag, MessageSquare, Loader2, ArrowRight } from 'lucide-react';
-import { MOCK_PRODUCTS } from '../mockData';
+import { Search, Film, Heart, MessageSquare, Loader2, ArrowRight } from 'lucide-react';
 import { useFollowing } from '../context/FollowingContext';
+import { db } from '../firebase';
+import { collection, onSnapshot } from 'firebase/firestore';
 
 // Статические аккаунты для глобального поиска (синхронно с Direct)
 const BASE_ACCOUNTS = [
   {
+    id: 'chat-maria',
+    name: 'maria_style',
+    fullName: 'Мария ✨',
+    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=60',
+    desc: 'Fashion блогер • Обзоры'
+  },
+  {
     id: 'chat-seller-1',
-    name: 'Анна (Менеджер по продажам) 👜',
+    name: 'anna_sales',
+    fullName: 'Анна 👜',
     avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&auto=format&fit=crop&q=60',
-    desc: 'Менеджер • Консультации'
-  },
-  {
-    id: 'chat-support',
-    name: 'Техподдержка InstaStore 🛠️',
-    avatar: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=100&auto=format&fit=crop&q=60',
-    desc: 'Официальный аккаунт поддержки'
-  },
-  {
-    id: 'chat-buyer-1',
-    name: 'Алексей (Клиент) 🤝',
-    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=60',
-    desc: 'Постоянный клиент'
+    desc: 'Официальный представитель'
   },
   {
     id: 'chat-logistic',
-    name: 'Сергей (Служба доставки/Логистика) 🚚',
+    name: 'sergey_logistic',
+    fullName: 'Сергей 🚚',
     avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&auto=format&fit=crop&q=60',
-    desc: 'Логист • Доставка посылок'
+    desc: 'Логистика и путешествия'
   },
   {
     id: 'chat-sales',
-    name: 'instastore_sales (Оптовый отдел) 📈',
+    name: 'instagram_sales',
+    fullName: 'Отдел продаж 📈',
     avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&auto=format&fit=crop&q=60',
     desc: 'Оптовые закупки и сотрудничество'
   },
   {
-    id: 'chat-maria',
-    name: 'Мария (Блогер / Инфлюенсер) ✨',
-    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=60',
-    desc: 'Fashion инфлюенсер • Обзоры'
+    id: 'chat-support',
+    name: 'instagram_official',
+    fullName: 'Instagram Support 🛠️',
+    avatar: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=100&auto=format&fit=crop&q=60',
+    desc: 'Официальный аккаунт поддержки'
   }
-];
-
-// Рекомендации Explore Grid (объединенные Рилсы и товары)
-const EXPLORE_ITEMS = [
-  { id: 'reel-1', type: 'reel', index: 0, mediaUrl: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500', title: 'Обзор SoundFlow 🎧' },
-  { id: 'prod-1', type: 'product', productId: 'prod-1', mediaUrl: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500', title: 'Смарт-часы Pulse' },
-  { id: 'reel-2', type: 'reel', index: 1, mediaUrl: 'https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=500', title: 'Кожаная сумка 👜' },
-  { id: 'prod-2', type: 'product', productId: 'prod-2', mediaUrl: 'https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=500', title: 'Кожаная сумка' },
-  { id: 'reel-3', type: 'reel', index: 2, mediaUrl: 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=500', title: 'Характеристики свитшота ✨' },
-  { id: 'prod-3', type: 'product', productId: 'prod-3', mediaUrl: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500', title: 'Наушники SoundFlow' }
 ];
 
 export default function Explore() {
@@ -59,25 +49,73 @@ export default function Explore() {
   const { isFollowing, toggleFollow } = useFollowing();
   
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeTab, setActiveTab] = useState('all'); // all, people, products
+  const [activeTab, setActiveTab] = useState('all'); // all, people, posts
   const [allAccounts, setAllAccounts] = useState(BASE_ACCOUNTS);
-  const [loading, setLoading] = useState(false);
+  
+  const [posts, setPosts] = useState([]);
+  const [reels, setReels] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [hoveredItemId, setHoveredItemId] = useState(null);
 
-  // Загружаем список контактов из localStorage, чтобы подтянуть кастомные
+  const isDemo = !db;
+
+  // Синхронизация данных с Firestore или локальными хранилищами
+  useEffect(() => {
+    setLoading(true);
+    if (isDemo) {
+      const savedPosts = localStorage.getItem('ig_feed_posts');
+      const savedReels = localStorage.getItem('demo_reels');
+      if (savedPosts) setPosts(JSON.parse(savedPosts));
+      if (savedReels) setReels(JSON.parse(savedReels));
+      setLoading(false);
+    } else {
+      try {
+        const unsubscribePosts = onSnapshot(collection(db, 'posts'), 
+          (snapshot) => {
+            const fetched = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            setPosts(fetched);
+          },
+          (err) => console.error("Ошибка при чтении постов в Explore:", err)
+        );
+
+        const unsubscribeReels = onSnapshot(collection(db, 'reels'), 
+          (snapshot) => {
+            const fetched = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            setReels(fetched);
+          },
+          (err) => console.error("Ошибка при чтении рилсов в Explore:", err)
+        );
+
+        setLoading(false);
+        return () => {
+          unsubscribePosts();
+          unsubscribeReels();
+        };
+      } catch (err) {
+        console.error("Ошибка инициализации Firestore в Explore:", err);
+        setLoading(false);
+      }
+    }
+  }, [isDemo]);
+
+  // Загружаем список контактов для поиска
   useEffect(() => {
     const saved = localStorage.getItem('demo_chats_list');
     if (saved) {
-      const customContacts = JSON.parse(saved);
-      const uniqueMap = {};
-      [...BASE_ACCOUNTS, ...customContacts].forEach(acc => {
-        uniqueMap[acc.id] = {
-          id: acc.id,
-          name: acc.name,
-          avatar: acc.avatar,
-          desc: acc.desc || acc.subtitle || 'Пользователь'
-        };
-      });
-      setAllAccounts(Object.values(uniqueMap));
+      try {
+        const customContacts = JSON.parse(saved);
+        const uniqueMap = {};
+        [...BASE_ACCOUNTS, ...customContacts].forEach(acc => {
+          uniqueMap[acc.id] = {
+            id: acc.id,
+            name: acc.name,
+            fullName: acc.fullName || acc.name,
+            avatar: acc.avatar,
+            desc: acc.desc || acc.subtitle || 'Пользователь'
+          };
+        });
+        setAllAccounts(Object.values(uniqueMap));
+      } catch (e) {}
     }
   }, []);
 
@@ -85,21 +123,73 @@ export default function Explore() {
     setSearchQuery(e.target.value);
   };
 
-  // Фильтрация результатов поиска
   const query = searchQuery.trim().toLowerCase();
   
+  // Фильтрация аккаунтов
   const filteredAccounts = allAccounts.filter(acc => 
-    acc.name.toLowerCase().includes(query) || acc.id.toLowerCase().includes(query)
+    acc.name.toLowerCase().includes(query) || 
+    acc.fullName.toLowerCase().includes(query)
   );
 
-  const filteredProducts = MOCK_PRODUCTS.filter(prod => 
-    prod.name.toLowerCase().includes(query) || prod.description.toLowerCase().includes(query)
+  // Фильтрация публикаций (по описанию или автору)
+  const filteredPosts = posts.filter(post => 
+    (post.caption && post.caption.toLowerCase().includes(query)) ||
+    (post.authorName && post.authorName.toLowerCase().includes(query))
   );
 
   const showPeople = activeTab === 'all' || activeTab === 'people';
-  const showProducts = activeTab === 'all' || activeTab === 'products';
+  const showPostsTab = activeTab === 'all' || activeTab === 'posts';
 
-  const hasResults = (query === '') || (filteredAccounts.length > 0 && showPeople) || (filteredProducts.length > 0 && showProducts);
+  const hasResults = (query === '') || (filteredAccounts.length > 0 && showPeople) || (filteredPosts.length > 0 && showPostsTab);
+
+  // Генерируем мозаичную сетку контента Explore (смесь Reels и Posts)
+  const getExploreGridItems = () => {
+    const mixed = [];
+    const maxLen = Math.max(posts.length, reels.length);
+    for (let i = 0; i < maxLen; i++) {
+      if (reels[i]) {
+        mixed.push({
+          id: reels[i].id,
+          type: 'reel',
+          mediaUrl: reels[i].coverUrl,
+          title: reels[i].caption || 'Reels video',
+          likes: reels[i].likes || 0,
+          comments: reels[i].comments ? reels[i].comments.length : 0,
+          index: i
+        });
+      }
+      if (posts[i]) {
+        mixed.push({
+          id: posts[i].id,
+          type: 'post',
+          mediaUrl: posts[i].image,
+          title: posts[i].caption || 'Post image',
+          likes: posts[i].likesCount || 0,
+          comments: posts[i].comments ? posts[i].comments.length : 0,
+          index: i
+        });
+      }
+    }
+    return mixed.slice(0, 8); // ограничиваем 8 элементами
+  };
+
+  const exploreGridItems = getExploreGridItems();
+
+  if (loading) {
+    return (
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: '100vh',
+        color: 'var(--text-secondary)'
+      }}>
+        <Loader2 size={40} className="animate-spin" style={{ color: 'var(--accent-pink)' }} />
+        <span style={{ marginTop: '12px' }}>Загрузка результатов...</span>
+      </div>
+    );
+  }
 
   return (
     <div className="animate-fade-in" style={{ padding: '100px 0 60px', minHeight: 'calc(100vh - var(--header-height))', position: 'relative' }}>
@@ -131,7 +221,7 @@ export default function Explore() {
           <div style={{ position: 'relative' }}>
             <input 
               type="text" 
-              placeholder="Поиск людей, товаров или обзоров..." 
+              placeholder="Поиск людей, публикаций или хэштегов..." 
               value={searchQuery}
               onChange={handleSearchChange}
               style={{
@@ -167,11 +257,11 @@ export default function Explore() {
                 Люди
               </button>
               <button 
-                onClick={() => setActiveTab('products')}
-                className={`btn ${activeTab === 'products' ? 'btn-primary' : 'btn-secondary'}`}
+                onClick={() => setActiveTab('posts')}
+                className={`btn ${activeTab === 'posts' ? 'btn-primary' : 'btn-secondary'}`}
                 style={{ padding: '6px 16px', fontSize: '12px', borderRadius: 'var(--border-radius-full)' }}
               >
-                Товары
+                Публикации
               </button>
             </div>
           )}
@@ -192,10 +282,13 @@ export default function Explore() {
                     const isF = isFollowing(acc.id);
                     return (
                       <div key={acc.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <div 
+                          onClick={() => navigate(`/profile/${acc.id}`)}
+                          style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }}
+                        >
                           <img src={acc.avatar} alt={acc.name} style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }} />
                           <div>
-                            <h4 style={{ fontSize: '14px', fontWeight: 700, margin: 0 }}>{acc.name}</h4>
+                            <h4 style={{ fontSize: '14px', fontWeight: 700, margin: 0 }}>@{acc.name}</h4>
                             <span style={{ fontSize: '12px', color: 'var(--text-tertiary)' }}>{acc.desc}</span>
                           </div>
                         </div>
@@ -245,29 +338,58 @@ export default function Explore() {
               </div>
             )}
 
-            {/* Результаты: Товары */}
-            {showProducts && filteredProducts.length > 0 && (
+            {/* Результаты: Публикации */}
+            {showPostsTab && filteredPosts.length > 0 && (
               <div className="glass" style={{ padding: '20px', borderRadius: 'var(--border-radius-md)' }}>
                 <h3 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '16px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                  Товары ({filteredProducts.length})
+                  Публикации ({filteredPosts.length})
                 </h3>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                  {filteredProducts.map(prod => (
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(3, 1fr)',
+                  gap: '16px'
+                }}>
+                  {filteredPosts.map(post => (
                     <div 
-                      key={prod.id} 
-                      onClick={() => navigate(`/product/${prod.id}`)}
-                      style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}
+                      key={post.id} 
+                      onClick={() => navigate('/')}
+                      onMouseEnter={() => setHoveredItemId(post.id)}
+                      onMouseLeave={() => setHoveredItemId(null)}
+                      style={{
+                        aspectRatio: '1',
+                        borderRadius: 'var(--border-radius-sm)',
+                        overflow: 'hidden',
+                        cursor: 'pointer',
+                        position: 'relative'
+                      }}
                     >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <img src={prod.image} alt={prod.name} style={{ width: '44px', height: '44px', borderRadius: 'var(--border-radius-sm)', objectFit: 'cover' }} />
-                        <div>
-                          <h4 style={{ fontSize: '14px', fontWeight: 700, margin: 0 }}>{prod.name}</h4>
-                          <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--accent-pink)' }}>{prod.price.toLocaleString()} ₽</span>
+                      <img src={post.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      {hoveredItemId === post.id && (
+                        <div style={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          width: '100%',
+                          height: '100%',
+                          backgroundColor: 'rgba(0,0,0,0.45)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '12px',
+                          color: 'white',
+                          fontWeight: '700',
+                          fontSize: '13px'
+                        }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+                            <Heart size={14} fill="white" />
+                            <span>{post.likesCount}</span>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+                            <MessageSquare size={14} fill="white" />
+                            <span>{post.comments ? post.comments.length : 0}</span>
+                          </div>
                         </div>
-                      </div>
-                      <button className="btn-text" style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px' }}>
-                        Купить <ArrowRight size={14} />
-                      </button>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -314,12 +436,12 @@ export default function Explore() {
                       }}
                     >
                       <div 
-                        onClick={() => navigate('/messages', { state: { selectChatId: acc.id } })}
+                        onClick={() => navigate(`/profile/${acc.id}`)}
                         style={{ cursor: 'pointer' }}
                       >
                         <img src={acc.avatar} alt={acc.name} style={{ width: '48px', height: '48px', borderRadius: '50%', objectFit: 'cover', marginBottom: '8px' }} />
                         <h4 style={{ fontSize: '12px', fontWeight: 700, margin: '0 0 10px', maxWidth: '100px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {acc.name.split(' ')[0]}
+                          @{acc.name}
                         </h4>
                       </div>
                       <button 
@@ -344,63 +466,76 @@ export default function Explore() {
               </div>
             </div>
 
-            {/* Мозаичная сетка Explore (Товары + Рилсы) */}
-            <div>
-              <h3 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '16px' }}>Исследовать (Explore)</h3>
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(2, 1fr)',
-                gap: '16px'
-              }}>
-                {EXPLORE_ITEMS.map(item => (
-                  <div 
-                    key={item.id}
-                    onClick={() => {
-                      if (item.type === 'reel') {
-                        navigate(`/reels?index=${item.index}`);
-                      } else {
-                        navigate(`/product/${item.productId}`);
-                      }
-                    }}
-                    className="glass"
-                    style={{
-                      borderRadius: 'var(--border-radius-md)',
-                      overflow: 'hidden',
-                      aspectRatio: '1',
-                      position: 'relative',
-                      cursor: 'pointer',
-                      transition: 'transform 0.2s'
-                    }}
-                    onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.02)'}
-                    onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
-                  >
-                    <img src={item.mediaUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    <div style={{
-                      position: 'absolute',
-                      top: 0,
-                      left: 0,
-                      width: '100%',
-                      height: '100%',
-                      background: 'linear-gradient(to top, rgba(0,0,0,0.6) 0%, transparent 40%)',
-                      display: 'flex',
-                      alignItems: 'flex-end',
-                      justifyContent: 'space-between',
-                      padding: '12px',
-                      color: 'white'
-                    }}>
-                      <span style={{ fontSize: '11px', fontWeight: 600, textShadow: '0 1px 2px rgba(0,0,0,0.8)' }}>
-                        {item.title}
-                      </span>
-                      {item.type === 'reel' ? (
-                        <Film size={14} color="white" />
-                      ) : (
-                        <ShoppingBag size={14} color="white" />
-                      )}
+            {/* Мозаичная сетка Explore (Смесь постов и рилсов) */}
+            {exploreGridItems.length > 0 && (
+              <div>
+                <h3 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '16px' }}>Исследовать (Explore)</h3>
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(2, 1fr)',
+                  gap: '16px'
+                }}>
+                  {exploreGridItems.map(item => (
+                    <div 
+                      key={item.id}
+                      onClick={() => {
+                        if (item.type === 'reel') {
+                          navigate(`/reels?index=${item.index}`);
+                        } else {
+                          navigate('/');
+                        }
+                      }}
+                      className="glass"
+                      style={{
+                        borderRadius: 'var(--border-radius-md)',
+                        overflow: 'hidden',
+                        aspectRatio: '1',
+                        position: 'relative',
+                        cursor: 'pointer',
+                        transition: 'transform 0.2s'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.transform = 'scale(1.02)';
+                        setHoveredItemId(item.id);
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.transform = 'scale(1)';
+                        setHoveredItemId(null);
+                      }}
+                    >
+                      <img src={item.mediaUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      <div style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: '100%',
+                        height: '100%',
+                        background: 'linear-gradient(to top, rgba(0,0,0,0.6) 0%, transparent 40%)',
+                        display: 'flex',
+                        alignItems: 'flex-end',
+                        justifyContent: 'space-between',
+                        padding: '12px',
+                        color: 'white'
+                      }}>
+                        <span style={{ fontSize: '11px', fontWeight: 600, textShadow: '0 1px 2px rgba(0,0,0,0.8)', maxWidth: '80%', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {item.title}
+                        </span>
+                        {item.type === 'reel' ? (
+                          <Film size={14} color="white" />
+                        ) : (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '2px', fontSize: '10px' }}>
+                              <Heart size={10} fill="white" />
+                              <span>{item.likes}</span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
 
           </div>
         )}
