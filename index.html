@@ -10,6 +10,9 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
     <script>
       function showGlobalError(title, msg) {
         const errorDiv = document.createElement('div');
@@ -34,6 +37,14 @@
       }
 
       window.addEventListener('error', function(e) {
+        // Проверяем, является ли ошибка сбоем загрузки ресурса (script, link, img)
+        if (e.target && (e.target.src || e.target.href)) {
+          const url = e.target.src || e.target.href;
+          const msg = 'Не удалось загрузить файл ресурса:\n' + url + '\n\n(Возможно, это старый кэшированный хэш. Пожалуйста, очистите кэш браузера)';
+          alert('Ошибка загрузки ресурса:\n' + msg);
+          showGlobalError('Resource Load Error', msg);
+          return;
+        }
         const msg = e.message + '\n' + (e.error ? e.error.stack : '');
         alert('JS Error: ' + msg);
         showGlobalError('JS Error', msg);
