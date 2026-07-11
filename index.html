@@ -34,11 +34,15 @@
       }
 
       window.addEventListener('error', function(e) {
-        showGlobalError('JS Error', e.message + '\n' + (e.error ? e.error.stack : ''));
-      });
+        const msg = e.message + '\n' + (e.error ? e.error.stack : '');
+        alert('JS Error: ' + msg);
+        showGlobalError('JS Error', msg);
+      }, true);
 
       window.addEventListener('unhandledrejection', function(e) {
-        showGlobalError('Promise Rejection', e.reason ? (e.reason.message + '\n' + e.reason.stack) : 'Unknown async error');
+        const msg = e.reason ? (e.reason.message + '\n' + e.reason.stack) : 'Unknown async error';
+        alert('Promise Rejection: ' + msg);
+        showGlobalError('Promise Rejection', msg);
       });
     </script>
   </head>
