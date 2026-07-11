@@ -3,7 +3,9 @@ import {
   onAuthStateChanged, 
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword, 
-  signOut as firebaseSignOut 
+  signOut as firebaseSignOut,
+  GoogleAuthProvider,
+  signInWithPopup
 } from 'firebase/auth';
 import { auth, isMockFirebase } from '../firebase';
 
@@ -79,6 +81,30 @@ export const AuthProvider = ({ children }) => {
     return firebaseSignOut(auth);
   };
 
+  const loginWithGoogleMock = async () => {
+    setLoading(true);
+    await new Promise(resolve => setTimeout(resolve, 800));
+    const mockUser = {
+      uid: 'demo-google-user-123',
+      email: 'google_user@gmail.com',
+      displayName: 'Google User ✨',
+      isDemo: true,
+      isAdmin: false
+    };
+    setCurrentUser(mockUser);
+    localStorage.setItem('demo_user', JSON.stringify(mockUser));
+    setLoading(false);
+    return mockUser;
+  };
+
+  const signInWithGoogle = () => {
+    if (isMockFirebase || !auth) {
+      return loginWithGoogleMock();
+    }
+    const provider = new GoogleAuthProvider();
+    return signInWithPopup(auth, provider);
+  };
+
   useEffect(() => {
     const authTimeout = setTimeout(() => {
       console.warn("[Auth] Инициализация Firebase Auth превысила время ожидания. Принудительный запуск...");
@@ -130,6 +156,7 @@ export const AuthProvider = ({ children }) => {
     login,
     signup,
     logout,
+    signInWithGoogle,
     isDemo: isMockFirebase
   };
 
