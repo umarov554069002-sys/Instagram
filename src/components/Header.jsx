@@ -165,7 +165,7 @@ export default function Header() {
                   style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                 />
               </div>
-              <span style={{ display: 'none' }}>{currentUser.displayName || currentUser.email.split('@')[0]}</span>
+              <span style={{ display: 'none' }}>{currentUser.displayName || (currentUser.email ? currentUser.email.split('@')[0] : 'user')}</span>
             </Link>
             <button
               onClick={handleLogout}

@@ -107,7 +107,7 @@ export default function Home() {
   const { currentUser } = useAuth();
 
   const currentUserId = currentUser ? currentUser.uid : 'guest_user';
-  const currentUserName = currentUser ? (currentUser.displayName || currentUser.email.split('@')[0]) : 'guest_user';
+  const currentUserName = currentUser ? (currentUser.displayName || (currentUser.email ? currentUser.email.split('@')[0] : 'user')) : 'guest_user';
 
   const [posts, setPosts] = useState([]);
   const [commentInputs, setCommentInputs] = useState({});

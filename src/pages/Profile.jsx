@@ -88,8 +88,8 @@ export default function Profile() {
     if (pid === 'me') {
       return {
         id: 'me',
-        name: currentUser ? (currentUser.displayName || currentUser.email.split('@')[0]) : 'guest_user',
-        fullName: currentUser ? currentUser.email : 'Гость',
+        name: currentUser ? (currentUser.displayName || (currentUser.email ? currentUser.email.split('@')[0] : 'user')) : 'guest_user',
+        fullName: currentUser ? (currentUser.email || currentUser.displayName || 'Гость') : 'Гость',
         avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=60',
         bio: 'Пользователь Instagram 📸. Обожаю стильные фотографии и качественный звук.',
         baseFollowers: 298000000000, // 298 млрд

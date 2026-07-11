@@ -73,7 +73,7 @@ export default function Reels() {
   const { isFollowing, toggleFollow } = useFollowing();
 
   const currentUserId = currentUser ? currentUser.uid : 'guest_user';
-  const currentUserName = currentUser ? (currentUser.displayName || currentUser.email.split('@')[0]) : 'guest_user';
+  const currentUserName = currentUser ? (currentUser.displayName || (currentUser.email ? currentUser.email.split('@')[0] : 'user')) : 'guest_user';
 
   const [reels, setReels] = useState([]);
   const [currentReelIdx, setCurrentReelIdx] = useState(0);
