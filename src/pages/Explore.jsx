@@ -502,16 +502,11 @@ export default function Explore() {
                         aspectRatio: '1',
                         position: 'relative',
                         cursor: 'pointer',
-                        transition: 'transform 0.2s'
+                        transition: 'transform 0.2s',
+                        transform: hoveredItemId === item.id ? 'scale(1.02)' : 'scale(1)'
                       }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.transform = 'scale(1.02)';
-                        setHoveredItemId(item.id);
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.transform = 'scale(1)';
-                        setHoveredItemId(null);
-                      }}
+                      onMouseEnter={() => setHoveredItemId(item.id)}
+                      onMouseLeave={() => setHoveredItemId(null)}
                     >
                       <img src={item.mediaUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                       <div style={{

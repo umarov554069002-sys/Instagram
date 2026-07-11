@@ -10,6 +10,26 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>
+      window.addEventListener('error', function(e) {
+        const errorDiv = document.createElement('div');
+        errorDiv.id = 'js-error-overlay';
+        errorDiv.style.position = 'fixed';
+        errorDiv.style.top = '0';
+        errorDiv.style.left = '0';
+        errorDiv.style.width = '100%';
+        errorDiv.style.height = '100%';
+        errorDiv.style.backgroundColor = 'white';
+        errorDiv.style.color = 'red';
+        errorDiv.style.zIndex = '999999';
+        errorDiv.style.padding = '20px';
+        errorDiv.style.fontFamily = 'monospace';
+        errorDiv.style.fontSize = '14px';
+        errorDiv.style.overflow = 'auto';
+        errorDiv.innerHTML = '<h1>JS Error:</h1><pre>' + e.message + '\n' + (e.error ? e.error.stack : '') + '</pre>';
+        document.body.appendChild(errorDiv);
+      });
+    </script>
   </head>
   <body>
     <div id="root"></div>
