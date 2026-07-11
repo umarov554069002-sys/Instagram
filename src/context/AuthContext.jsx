@@ -80,7 +80,13 @@ export const AuthProvider = ({ children }) => {
   };
 
   useEffect(() => {
+    const authTimeout = setTimeout(() => {
+      console.warn("[Auth] Инициализация Firebase Auth превысила время ожидания. Принудительный запуск...");
+      setLoading(false);
+    }, 3000);
+
     if (isMockFirebase || !auth) {
+      clearTimeout(authTimeout);
       // Инициализация демо-пользователя из localStorage
       const savedUser = localStorage.getItem('demo_user');
       if (savedUser) {
@@ -93,6 +99,7 @@ export const AuthProvider = ({ children }) => {
       // Реальный Firebase Auth слушатель
       try {
         const unsubscribe = onAuthStateChanged(auth, (user) => {
+          clearTimeout(authTimeout);
           if (user) {
             // Для простоты, админ — это пользователь с определенной почтой, либо проверяем кастомные claims в будущем
             const enrichedUser = {
@@ -105,8 +112,12 @@ export const AuthProvider = ({ children }) => {
           }
           setLoading(false);
         });
-        return unsubscribe;
+        return () => {
+          clearTimeout(authTimeout);
+          unsubscribe();
+        };
       } catch (err) {
+        clearTimeout(authTimeout);
         console.error("Ошибка при подписке на AuthStateChanged:", err);
         setLoading(false);
       }
