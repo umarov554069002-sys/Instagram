@@ -11,7 +11,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script>
-      window.addEventListener('error', function(e) {
+      function showGlobalError(title, msg) {
         const errorDiv = document.createElement('div');
         errorDiv.id = 'js-error-overlay';
         errorDiv.style.position = 'fixed';
@@ -26,8 +26,19 @@
         errorDiv.style.fontFamily = 'monospace';
         errorDiv.style.fontSize = '14px';
         errorDiv.style.overflow = 'auto';
-        errorDiv.innerHTML = '<h1>JS Error:</h1><pre>' + e.message + '\n' + (e.error ? e.error.stack : '') + '</pre>';
-        document.body.appendChild(errorDiv);
+        errorDiv.innerHTML = '<h1>' + title + '</h1><pre>' + msg + '</pre>';
+        const target = document.body || document.documentElement;
+        if (target) {
+          target.appendChild(errorDiv);
+        }
+      }
+
+      window.addEventListener('error', function(e) {
+        showGlobalError('JS Error', e.message + '\n' + (e.error ? e.error.stack : ''));
+      });
+
+      window.addEventListener('unhandledrejection', function(e) {
+        showGlobalError('Promise Rejection', e.reason ? (e.reason.message + '\n' + e.reason.stack) : 'Unknown async error');
       });
     </script>
   </head>

@@ -80,29 +80,36 @@ export const AuthProvider = ({ children }) => {
   };
 
   useEffect(() => {
-    if (isMockFirebase) {
+    if (isMockFirebase || !auth) {
       // Инициализация демо-пользователя из localStorage
       const savedUser = localStorage.getItem('demo_user');
       if (savedUser) {
-        setCurrentUser(JSON.parse(savedUser));
+        try {
+          setCurrentUser(JSON.parse(savedUser));
+        } catch (e) {}
       }
       setLoading(false);
     } else {
       // Реальный Firebase Auth слушатель
-      const unsubscribe = onAuthStateChanged(auth, (user) => {
-        if (user) {
-          // Для простоты, админ — это пользователь с определенной почтой, либо проверяем кастомные claims в будущем
-          const enrichedUser = {
-            ...user,
-            isAdmin: user.email === 'admin@store.com' || user.email === 'admin@admin.com'
-          };
-          setCurrentUser(enrichedUser);
-        } else {
-          setCurrentUser(null);
-        }
+      try {
+        const unsubscribe = onAuthStateChanged(auth, (user) => {
+          if (user) {
+            // Для простоты, админ — это пользователь с определенной почтой, либо проверяем кастомные claims в будущем
+            const enrichedUser = {
+              ...user,
+              isAdmin: user.email === 'admin@store.com' || user.email === 'admin@admin.com'
+            };
+            setCurrentUser(enrichedUser);
+          } else {
+            setCurrentUser(null);
+          }
+          setLoading(false);
+        });
+        return unsubscribe;
+      } catch (err) {
+        console.error("Ошибка при подписке на AuthStateChanged:", err);
         setLoading(false);
-      });
-      return unsubscribe;
+      }
     }
   }, []);
 

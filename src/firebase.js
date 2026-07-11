@@ -12,7 +12,7 @@ const firebaseConfig = {
 };
 
 // Проверяем, настроены ли реальные ключи Firebase
-export const isMockFirebase = 
+export let isMockFirebase = 
   !firebaseConfig.apiKey || 
   firebaseConfig.apiKey === 'mock_key' || 
   firebaseConfig.apiKey.includes('your_api_key');
@@ -29,6 +29,7 @@ if (!isMockFirebase) {
     console.log("Firebase успешно инициализирован.");
   } catch (error) {
     console.error("Ошибка при инициализации Firebase. Включается демо-режим.", error);
+    isMockFirebase = true;
   }
 } else {
   console.log("Запущен демо-режим (Firebase не настроен). Используются локальные заглушки.");
